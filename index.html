@@ -1,0 +1,1374 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>思维导图编辑器 PC版</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html, body { height:100%; overflow:hidden; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  background:#f0f2f5;
+  display:flex; flex-direction:column;
+  user-select:none; -webkit-user-select:none;
+  overscroll-behavior:none;
+}
+input, textarea { user-select:text; -webkit-user-select:text; }
+#app { display:flex; flex-direction:column; height:100%; }
+/* 导图标签栏 */
+.map-tabs {
+  display:flex; align-items:center;
+  background:#fff; border-bottom:1px solid #e5e6eb;
+  padding:0 10px; gap:6px; height:44px; min-height:44px;
+  flex-shrink:0; overflow-x:auto; overflow-y:hidden;
+  -webkit-overflow-scrolling:touch;
+}
+.map-tabs::-webkit-scrollbar { display:none; }
+.map-tab {
+  flex-shrink:0; height:30px; padding:0 14px;
+  border-radius:6px; font-size:13px; color:#666;
+  display:flex; align-items:center; gap:6px;
+  cursor:pointer; white-space:nowrap; max-width:140px;
+  background:transparent; border:none;
+}
+.map-tab span { overflow:hidden; text-overflow:ellipsis; }
+.map-tab:hover { background:#f0f0f0; }
+.map-tab.active { background:#e8f5e9; color:#1a7f5a; font-weight:600; }
+.map-tab:active { background:#f0f0f0; }
+.map-tab .close { font-size:14px; color:#999; opacity:0; transition:opacity .15s; }
+.map-tab:hover .close { opacity:1; }
+.map-add {
+  flex-shrink:0; width:30px; height:30px; border:none;
+  background:#f5f5f5; border-radius:6px; font-size:16px;
+  cursor:pointer; color:#666; display:flex; align-items:center; justify-content:center;
+}
+.map-add:hover { background:#e8f5e9; color:#1a7f5a; }
+.topbar {
+  height:48px; min-height:48px; background:#fff;
+  border-bottom:1px solid #e5e6eb;
+  display:flex; align-items:center; padding:0 14px; gap:8px;
+  flex-shrink:0; z-index:10;
+}
+.topbar .title { font-size:15px; font-weight:600; color:#1a7f5a; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.topbar .zoom { font-size:12px; color:#999; min-width:42px; text-align:right; }
+.icon-btn {
+  width:36px; height:36px; border:none; background:#f5f5f5;
+  border-radius:8px; font-size:16px;
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer; color:#555; flex-shrink:0; transition:all .15s;
+}
+.icon-btn:hover { background:#e8f5e9; color:#1a7f5a; }
+.icon-btn:active { background:#d0ecd9; }
+.canvas-wrap {
+  flex:1; position:relative; overflow:hidden;
+  background-image: radial-gradient(circle, #d9d9d9 1px, transparent 1px);
+  background-size:20px 20px; touch-action:none;
+}
+.canvas { position:absolute; top:0; left:0; transform-origin:0 0; will-change:transform; }
+.lines { position:absolute; top:0; left:0; overflow:visible; pointer-events:none; }
+.lines path { fill:none; stroke-width:2; }
+.lines path.link-conn { stroke-width:2; stroke-dasharray:6 4; }
+.lines path.link-related { stroke-width:2.5; stroke-dasharray:5 3; animation:dash 1s linear infinite; }
+@keyframes dash { to { stroke-dashoffset:-16; } }
+.node {
+  position:absolute; width:150px; min-height:40px; padding:8px 10px;
+  border-radius:8px; font-size:13px; line-height:1.35; text-align:center;
+  display:flex; align-items:center; justify-content:center;
+  border:2px solid transparent; word-break:break-all;
+  box-shadow:0 1px 4px rgba(0,0,0,.08); cursor:grab;
+  transition:box-shadow .15s,opacity .2s; touch-action:none;
+}
+.node.dragging { cursor:grabbing; box-shadow:0 4px 16px rgba(0,0,0,.25); opacity:.9; z-index:10; }
+.node.root { font-size:14px; font-weight:700; min-height:46px; }
+.node.selected { box-shadow:0 0 0 3px rgba(24,144,255,.45), 0 2px 8px rgba(0,0,0,.15); }
+.node.related { box-shadow:0 0 0 3px rgba(255,152,0,.65), 0 0 14px rgba(255,152,0,.45); }
+.node.dimmed { opacity:.2; }
+.node-tags {
+  position:absolute; top:-16px; left:50%; transform:translateX(-50%);
+  display:flex; gap:3px; white-space:nowrap; pointer-events:auto;
+}
+.tag-badge {
+  font-size:10px; padding:1px 6px; border-radius:8px;
+  background:#ff9800; color:#fff; cursor:pointer;
+  max-width:56px; overflow:hidden; text-overflow:ellipsis;
+  border:1px solid #f57c00;
+}
+.tag-badge:hover { opacity:.8; }
+.tag-badge.active { background:#e65100; animation:pulse 1s infinite; }
+@keyframes pulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.15);} }
+.connect-hint {
+  position:fixed; top:90px; left:50%; transform:translateX(-50%);
+  background:#ff9800; color:#fff; padding:8px 18px; border-radius:20px;
+  font-size:13px; z-index:100; box-shadow:0 2px 10px rgba(0,0,0,.2);
+  animation:bounce .6s infinite alternate;
+}
+@keyframes bounce { from{transform:translateX(-50%) translateY(0);} to{transform:translateX(-50%) translateY(-4px);} }
+.conn-note-label {
+  position: absolute; transform: translate(-50%, -50%);
+  background: rgba(255,255,255,.94); border: 1px solid #ff9800;
+  color: #e65100; font-size: 11px; padding: 3px 10px; border-radius: 12px;
+  max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  cursor: pointer; box-shadow: 0 1px 6px rgba(0,0,0,.12);
+  pointer-events: auto; z-index: 5; font-weight: 500;
+}
+.conn-note-label:hover { background:#fff3e0; }
+.bottombar {
+  background:#fff; border-top:1px solid #e5e6eb;
+  padding:8px 12px;
+  display:flex; gap:8px; flex-shrink:0; z-index:10; justify-content:center;
+}
+.tool-btn {
+  height:38px; padding:0 16px; border:none; border-radius:8px; font-size:13px;
+  display:flex; flex-direction:row; align-items:center; justify-content:center;
+  gap:6px; cursor:pointer; color:#555; background:#f5f5f5; transition:all .15s; white-space:nowrap;
+}
+.tool-btn .ico { font-size:15px; }
+.tool-btn:hover:not(:disabled) { background:#e8f5e9; color:#1a7f5a; }
+.tool-btn:active:not(:disabled) { background:#d0ecd9; }
+.tool-btn.primary { background:#1a7f5a; color:#fff; }
+.tool-btn.primary:active { background:#156648; }
+.tool-btn.warn { background:#fff3e0; color:#e65100; }
+.tool-btn.warn:active { background:#ffe0b2; }
+.tool-btn.danger:active { background:#ffebee; color:#e53935; }
+.tool-btn:disabled { opacity:.35; }
+.edit-panel {
+  position:fixed; left:50%; top:50%; background:#fff;
+  border-radius:12px; padding:20px; width:420px; max-width:92vw;
+  box-shadow:0 8px 32px rgba(0,0,0,.2); transform:translate(-50%,-46%);
+  opacity:0; pointer-events:none;
+  transition:all .2s ease; z-index:50;
+}
+.edit-panel.show { transform:translate(-50%,-50%); opacity:1; pointer-events:auto; }
+.edit-panel .label { font-size:13px; color:#999; margin-bottom:8px; }
+.edit-panel input {
+  width:100%; height:44px; border:1px solid #e5e6eb; border-radius:8px;
+  padding:0 12px; font-size:15px; outline:none; margin-bottom:12px;
+}
+.edit-panel input:focus { border-color:#1a7f5a; }
+.edit-panel .hint { font-size:11px; color:#bbb; margin-bottom:10px; margin-top:-6px; }
+.edit-panel .actions { display:flex; gap:8px; }
+.edit-panel .actions button { flex:1; height:44px; border:none; border-radius:8px; font-size:15px; cursor:pointer; }
+.edit-panel .cancel { background:#f5f5f5; color:#555; }
+.edit-panel .ok { background:#1a7f5a; color:#fff; }
+.mask { position:fixed; inset:0; background:rgba(0,0,0,.3); z-index:40; display:none; }
+.mask.show { display:block; }
+.modal-mask {
+  position:fixed; inset:0; background:rgba(0,0,0,.4);
+  display:none; align-items:center; justify-content:center; z-index:60;
+}
+.modal-mask.show { display:flex; }
+.modal {
+  background:#fff; border-radius:12px; width:560px; max-width:94vw; max-height:84vh;
+  display:flex; flex-direction:column; overflow:hidden; animation:zoomIn .18s ease;
+}
+@keyframes zoomIn { from{transform:scale(.96);opacity:0;} to{transform:scale(1);opacity:1;} }
+.modal-header {
+  padding:14px 16px; font-size:15px; font-weight:600;
+  border-bottom:1px solid #f0f0f0; display:flex; justify-content:space-between; align-items:center;
+}
+.modal-header .close { cursor:pointer; color:#999; font-size:22px; border:none; background:none; width:32px; height:32px; }
+.modal-body { padding:14px 16px; overflow:auto; flex:1; }
+.modal-footer {
+  padding:12px 16px;
+  border-top:1px solid #f0f0f0; display:flex; gap:8px; justify-content:flex-end;
+}
+.modal-footer button { min-width:110px; height:40px; padding:0 18px; border:none; border-radius:8px; font-size:14px; cursor:pointer; }
+.modal-footer .ghost { background:#f5f5f5; color:#555; }
+.modal-footer .solid { background:#1a7f5a; color:#fff; }
+.format-tabs { display:flex; gap:8px; margin-bottom:12px; }
+.format-tabs .tab {
+  flex:1; padding:8px 4px; border:1px solid #d9d9d9; background:#fff;
+  border-radius:8px; cursor:pointer; font-size:12px; text-align:center;
+}
+.format-tabs .tab.active { background:#1a7f5a; color:#fff; border-color:#1a7f5a; }
+.export-text {
+  width:100%; height:180px; border:1px solid #e5e6eb; border-radius:8px;
+  padding:10px; font-family:monospace; font-size:11px; resize:none; line-height:1.6;
+}
+.menu-list { display:flex; flex-direction:column; gap:4px; }
+.menu-item {
+  padding:13px 12px; border-radius:8px; font-size:14px;
+  display:flex; align-items:center; gap:10px; cursor:pointer; background:#f9f9f9;
+}
+.menu-item:hover { background:#eef7f0; }
+.menu-item:active { background:#e8f5e9; }
+.menu-item .ico { font-size:17px; width:22px; text-align:center; }
+.menu-item .badge { margin-left:auto; background:#ff9800; color:#fff; font-size:11px; padding:2px 8px; border-radius:10px; }
+.confirm-msg { font-size:14px; color:#555; line-height:1.8; padding:8px 0; }
+.conn-item {
+  background:#f9f9f9; border-radius:8px; padding:10px 12px; margin-bottom:8px;
+}
+.conn-row { display:flex; align-items:center; gap:8px; }
+.conn-item .txt { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; }
+.conn-item .arrow { color:#ff9800; font-weight:bold; }
+.conn-item .del { border:none; background:#ffebee; color:#e53935; padding:5px 10px; border-radius:6px; font-size:12px; cursor:pointer; flex-shrink:0; }
+.conn-note-input {
+  width:100%; height:34px; border:1px solid #e5e6eb; border-radius:6px;
+  padding:0 10px; font-size:12px; outline:none; margin-top:8px;
+}
+.conn-note-input:focus { border-color:#ff9800; }
+/* 导图管理列表 */
+.map-manage-item {
+  display:flex; align-items:center; gap:10px;
+  padding:12px; background:#f9f9f9; border-radius:8px; margin-bottom:6px;
+}
+.map-manage-item .map-name { flex:1; font-size:14px; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.map-manage-item .map-time { font-size:11px; color:#999; }
+.map-manage-item .map-actions { display:flex; gap:6px; }
+.map-manage-item .map-actions button {
+  border:none; padding:6px 10px; border-radius:6px; font-size:12px; cursor:pointer;
+}
+.map-manage-item .btn-edit { background:#e3f2fd; color:#1565c0; }
+.map-manage-item .btn-del { background:#ffebee; color:#e53935; }
+.map-manage-item.current { border:2px solid #1a7f5a; background:#e8f5e9; }
+.empty-tip { text-align:center; color:#bbb; font-size:13px; padding:30px 0; }
+.toast {
+  position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+  background:rgba(0,0,0,.75); color:#fff; padding:10px 20px; border-radius:8px;
+  font-size:14px; z-index:200; opacity:0; pointer-events:none; transition:opacity .2s;
+}
+.toast.show { opacity:1; }
+/* ===== 夜间模式 ===== */
+:root {
+  --dm-bg:#12121f; --dm-panel:#1a1a2e; --dm-panel2:#1e1e35;
+  --dm-border:#2d2d4a; --dm-text:#e0e0e0; --dm-text2:#aaa; --dm-text3:#777;
+  --dm-btn:#252540; --dm-btn-active:#303050; --dm-dot:#2a2a45;
+}
+body.dark { background:var(--dm-bg); color:var(--dm-text); }
+body.dark .map-tabs { background:var(--dm-panel); border-color:var(--dm-border); }
+body.dark .map-tab { color:var(--dm-text2); }
+body.dark .map-tab.active { background:rgba(76,175,80,.2); color:#66bb6a; }
+body.dark .map-tab:active { background:var(--dm-btn-active); }
+body.dark .map-add { background:var(--dm-btn); color:var(--dm-text2); }
+body.dark .map-add:active { background:rgba(76,175,80,.2); color:#66bb6a; }
+body.dark .topbar { background:var(--dm-panel); border-color:var(--dm-border); }
+body.dark .topbar .title { color:#66bb6a; }
+body.dark .topbar .zoom { color:var(--dm-text3); }
+body.dark .icon-btn { background:var(--dm-btn); color:var(--dm-text2); }
+body.dark .icon-btn:active { background:rgba(76,175,80,.2); color:#66bb6a; }
+body.dark .canvas-wrap { background-color:var(--dm-bg); background-image:radial-gradient(circle,var(--dm-dot) 1px,transparent 1px); }
+body.dark .bottombar { background:var(--dm-panel); border-color:var(--dm-border); }
+body.dark .tool-btn { background:var(--dm-btn); color:var(--dm-text2); }
+body.dark .tool-btn:active { background:var(--dm-btn-active); color:var(--dm-text); }
+body.dark .tool-btn.primary { background:#2e7d32; color:#fff; }
+body.dark .tool-btn.primary:active { background:#1b5e20; }
+body.dark .tool-btn.warn { background:rgba(255,152,0,.15); color:#ffb74d; }
+body.dark .tool-btn.warn:active { background:rgba(255,152,0,.25); }
+body.dark .tool-btn.danger:active { background:rgba(229,57,53,.2); color:#ef5350; }
+body.dark .edit-panel { background:var(--dm-panel); }
+body.dark .edit-panel .label { color:var(--dm-text2); }
+body.dark .edit-panel input { background:var(--dm-panel2); border-color:var(--dm-border); color:var(--dm-text); }
+body.dark .edit-panel input:focus { border-color:#66bb6a; }
+body.dark .edit-panel .hint { color:var(--dm-text3); }
+body.dark .edit-panel .cancel { background:var(--dm-btn); color:var(--dm-text2); }
+body.dark .edit-panel .ok { background:#2e7d32; color:#fff; }
+body.dark .mask { background:rgba(0,0,0,.5); }
+body.dark .modal { background:var(--dm-panel); }
+body.dark .modal-header { color:var(--dm-text); border-color:var(--dm-border); }
+body.dark .modal-header .close { color:var(--dm-text3); }
+body.dark .modal-body { color:var(--dm-text); }
+body.dark .modal-footer { border-color:var(--dm-border); }
+body.dark .modal-footer .ghost { background:var(--dm-btn); color:var(--dm-text2); }
+body.dark .modal-footer .solid { background:#2e7d32; color:#fff; }
+body.dark .menu-item { background:var(--dm-panel2); color:var(--dm-text); }
+body.dark .menu-item:active { background:rgba(76,175,80,.15); }
+body.dark .format-tabs .tab { background:var(--dm-panel2); border-color:var(--dm-border); color:var(--dm-text2); }
+body.dark .format-tabs .tab.active { background:#2e7d32; border-color:#2e7d32; color:#fff; }
+body.dark .export-text { background:var(--dm-panel2); border-color:var(--dm-border); color:var(--dm-text); }
+body.dark .conn-item { background:var(--dm-panel2); }
+body.dark .conn-item .txt { color:var(--dm-text); }
+body.dark .conn-note-input { background:var(--dm-bg); border-color:var(--dm-border); color:var(--dm-text); }
+body.dark .conn-note-input:focus { border-color:#ffb74d; }
+body.dark .map-manage-item { background:var(--dm-panel2); }
+body.dark .map-manage-item.current { border-color:#66bb6a; background:rgba(76,175,80,.12); }
+body.dark .map-manage-item .map-name { color:var(--dm-text); }
+body.dark .map-manage-item .map-time { color:var(--dm-text3); }
+body.dark .map-manage-item .btn-edit { background:rgba(33,150,243,.15); color:#64b5f6; }
+body.dark .map-manage-item .btn-del { background:rgba(229,57,53,.15); color:#ef5350; }
+body.dark .empty-tip { color:var(--dm-text3); }
+body.dark .confirm-msg { color:var(--dm-text2); }
+body.dark .conn-note-label { background:rgba(30,30,53,.95); border-color:#ffb74d; color:#ffb74d; }
+body.dark .connect-hint { background:#e65100; }
+body.dark .node.selected { box-shadow:0 0 0 3px rgba(100,181,246,.5),0 2px 8px rgba(0,0,0,.4); }
+body.dark .node.related { box-shadow:0 0 0 3px rgba(255,183,77,.7),0 0 14px rgba(255,152,0,.5); }
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- 导图标签栏 -->
+  <div class="map-tabs">
+    <button v-for="m in maps" :key="'tab'+m.id" class="map-tab" :class="{active:m.id===currentMapId}"
+            @click="switchMap(m.id)">
+      <span>{{ m.name }}</span>
+    </button>
+    <button class="map-add" @click="newMap()" title="新建导图">＋</button>
+  </div>
+  <!-- 顶部栏 -->
+  <div class="topbar">
+    <span class="title">{{ currentMap ? currentMap.name : '' }}</span>
+    <button class="icon-btn" @click="newRootInCurrent" title="在当前画布新建导图">🌱</button>
+    <button class="icon-btn" @click="openMapManager" title="导图管理">📁</button>
+    <button class="icon-btn" @click="toggleDark" :title="darkMode?'切换日间模式':'切换夜间模式'">{{ darkMode ? '☀️' : '🌙' }}</button>
+    <button class="icon-btn" @click="fitView" title="适应窗口">⛶</button>
+    <span class="zoom">{{ Math.round(view.scale*100) }}%</span>
+  </div>
+  <div class="connect-hint" v-if="connectingFrom !== null">🔗 连接模式：点击目标节点建立连接，点空白取消</div>
+  <!-- 画布 -->
+  <div class="canvas-wrap" ref="wrapRef"
+       @touchstart="onCanvasTouchStart"
+       @touchmove="onCanvasTouchMove"
+       @touchend="onCanvasTouchEnd"
+       @mousedown="onCanvasMouseDown"
+       @wheel.prevent="onWheel">
+    <div class="canvas" :style="canvasStyle">
+      <svg class="lines" :width="layout.width" :height="layout.height" xmlns="http://www.w3.org/2000/svg">
+        <path v-for="link in layout.links" :key="'l'+link.id" :d="link.d" :stroke="link.color" stroke-opacity="0.5" />
+        <path v-for="c in connLines" :key="'c'+c.id" class="link-conn" :d="c.d" stroke="#ff9800" stroke-opacity="0.7" />
+        <path v-for="r in relatedLines" :key="'r'+r.id" class="link-related" :d="r.d" stroke="#ff5722" stroke-opacity="0.8" />
+      </svg>
+      <div v-for="n in layout.nodes" :key="'n'+n.id"
+           class="node" :class="{root:n.isRoot, selected:n.id===selectedId, related:isRelated(n.id), dimmed: activeTag && !isRelated(n.id) && n.id!==selectedId, dragging:dragNodeId===n.id}"
+           :style="{left:n.x+'px', top:n.y+'px', background:n.bg, borderColor:n.border, color:n.textColor}"
+           @touchstart.stop="onNodeTouchStart(n, $event)"
+           @touchmove.stop="onNodeTouchMove($event)"
+           @touchend.stop="onNodeTouchEnd(n, $event)"
+           @mousedown.stop="onNodeMouseDown(n, $event)"
+           @click.stop="onNodeClick(n)"
+           @dblclick.stop="openEditFor(n)">
+        <div class="node-tags" v-if="n.tags && n.tags.length">
+          <span v-for="t in n.tags.slice(0,2)" :key="t" class="tag-badge" :class="{active:t===activeTag}"
+                @click.stop="toggleTagRelation(t)">{{ t }}</span>
+          <span v-if="n.tags.length>2" class="tag-badge">+{{ n.tags.length-2 }}</span>
+        </div>
+        {{ n.text }}
+      </div>
+      <div v-for="note in connNotes" :key="'cn'+note.id" class="conn-note-label"
+           :style="{left:note.x+'px', top:note.y+'px'}" @click.stop="editConnNote(note.id)">
+        📝 {{ note.text }}
+      </div>
+    </div>
+  </div>
+  <!-- 底部工具栏 -->
+  <div class="bottombar">
+    <button class="tool-btn primary" :disabled="!selectedId" @click="addChild"><span class="ico">＋</span>子节点</button>
+    <button class="tool-btn" :disabled="!selectedId || isRootSelected" @click="addSibling"><span class="ico">↳</span>同级</button>
+    <button class="tool-btn danger" :disabled="!selectedId" @click="deleteNode"><span class="ico">✕</span>删除</button>
+    <button class="tool-btn warn" :disabled="!selectedId" @click="openTagEditor"><span class="ico">🏷</span>标签</button>
+    <button class="tool-btn warn" :disabled="!selectedId" @click="startConnect"><span class="ico">🔗</span>连接</button>
+    <button class="tool-btn" @click="showMenu=true"><span class="ico">⋯</span>更多</button>
+  </div>
+  <!-- 编辑文字 -->
+  <div class="mask" :class="{show:editing}" @click="cancelEdit"></div>
+  <div class="edit-panel" :class="{show:editing}">
+    <div class="label">编辑节点文字</div>
+    <input ref="editInput" v-model="editText" @keyup.enter="saveEdit" placeholder="输入节点文字" />
+    <div class="actions">
+      <button class="cancel" @click="cancelEdit">取消</button>
+      <button class="ok" @click="saveEdit">完成</button>
+    </div>
+  </div>
+  <!-- 编辑标签 -->
+  <div class="mask" :class="{show:editingTag}" @click="cancelTag"></div>
+  <div class="edit-panel" :class="{show:editingTag}">
+    <div class="label">编辑节点标签</div>
+    <input ref="tagInputEl" v-model="tagInput" @keyup.enter="saveTag" placeholder="输入标签，多个用逗号分隔" />
+    <div class="hint">相同标签的节点可点击标签进行联想高亮</div>
+    <div class="actions">
+      <button class="cancel" @click="cancelTag">取消</button>
+      <button class="ok" @click="saveTag">保存</button>
+    </div>
+  </div>
+  <!-- 更多菜单 -->
+  <div class="modal-mask" :class="{show:showMenu}" @click.self="showMenu=false">
+    <div class="modal">
+      <div class="modal-header"><span>更多操作</span><button class="close" @click="showMenu=false">×</button></div>
+      <div class="modal-body">
+        <div class="menu-list">
+          <div class="menu-item" @click="openEdit"><span class="ico">✎</span>编辑节点文字</div>
+          <div class="menu-item" @click="resetNodePosition"><span class="ico">⟲</span>重置节点位置</div>
+          <div class="menu-item" @click="openConnManager"><span class="ico">🔗</span>管理连接<span class="badge" v-if="currentMap && currentMap.connections.length">{{ currentMap.connections.length }}</span></div>
+          <div class="menu-item" @click="openExport"><span class="ico">📤</span>导出（Markdown / Mermaid / 图片）</div>
+          <div class="menu-item" @click="openMapManager"><span class="ico">📁</span>导图管理（{{ maps.length }}个）</div>
+          <div class="menu-item" @click="confirmClearCurrent"><span class="ico">🗑</span>清空当前画布</div>
+          <div class="menu-item" @click="showHelp"><span class="ico">❓</span>使用帮助</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- 导图管理 -->
+  <div class="modal-mask" :class="{show:showMapManager}" @click.self="showMapManager=false">
+    <div class="modal">
+      <div class="modal-header"><span>导图管理（{{ maps.length }}个）</span><button class="close" @click="showMapManager=false">×</button></div>
+      <div class="modal-body">
+        <div class="menu-list" style="margin-bottom:12px;">
+          <div class="menu-item" @click="newMap()"><span class="ico">＋</span>新建导图</div>
+        </div>
+        <div v-for="m in maps" :key="'mm'+m.id" class="map-manage-item" :class="{current:m.id===currentMapId}">
+          <div style="flex:1;min-width:0;">
+            <div class="map-name">{{ m.name }} <span v-if="m.id===currentMapId" style="color:#1a7f5a;font-size:11px;">（当前）</span></div>
+            <div class="map-time">{{ m.roots.length }}个导图 · {{ formatTime(m.updatedAt) }}</div>
+          </div>
+          <div class="map-actions">
+            <button class="btn-edit" @click="startRenameMap(m.id)">重命名</button>
+            <button class="btn-del" @click="deleteMap(m.id)">删除</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer"><button class="solid" @click="showMapManager=false">完成</button></div>
+    </div>
+  </div>
+  <!-- 重命名导图 -->
+  <div class="mask" :class="{show:renamingMap}" @click="cancelRenameMap"></div>
+  <div class="edit-panel" :class="{show:renamingMap}">
+    <div class="label">重命名导图</div>
+    <input ref="renameInput" v-model="renameText" @keyup.enter="saveRenameMap" placeholder="输入导图名称" />
+    <div class="actions">
+      <button class="cancel" @click="cancelRenameMap">取消</button>
+      <button class="ok" @click="saveRenameMap">保存</button>
+    </div>
+  </div>
+  <!-- 管理连接 -->
+  <div class="modal-mask" :class="{show:showConnManager}" @click.self="showConnManager=false">
+    <div class="modal">
+      <div class="modal-header"><span>管理连接（{{ currentMap ? currentMap.connections.length : 0 }}）</span><button class="close" @click="showConnManager=false">×</button></div>
+      <div class="modal-body">
+        <div v-if="!connList.length" class="empty-tip">暂无连接，选中节点后点底部「连接」按钮创建</div>
+        <div v-for="c in connList" :key="c.id" class="conn-item">
+          <div class="conn-row">
+            <span class="txt">{{ c.fromText }}</span>
+            <span class="arrow">⇄</span>
+            <span class="txt">{{ c.toText }}</span>
+            <button class="del" @click="deleteConnection(c.id)">删除</button>
+          </div>
+          <input class="conn-note-input" :value="c.note" @input="updateConnNote(c.id, $event.target.value)" placeholder="📝 在此输入连接批注..." />
+        </div>
+      </div>
+      <div class="modal-footer"><button class="solid" @click="showConnManager=false">完成</button></div>
+    </div>
+  </div>
+  <!-- 导出 -->
+  <div class="modal-mask" :class="{show:showExport}" @click.self="showExport=false">
+    <div class="modal">
+      <div class="modal-header"><span>导出思维导图</span><button class="close" @click="showExport=false">×</button></div>
+      <div class="modal-body">
+        <div class="format-tabs">
+          <div class="tab" :class="{active:exportFmt==='md'}" @click="exportFmt='md'">Markdown</div>
+          <div class="tab" :class="{active:exportFmt==='mermaid'}" @click="exportFmt='mermaid'">Mermaid</div>
+          <div class="tab" :class="{active:exportFmt==='png'}" @click="exportFmt='png'">🖼 图片</div>
+        </div>
+        <textarea v-if="exportFmt!=='png'" class="export-text" readonly :value="exportContent"></textarea>
+        <div v-if="exportFmt==='png'" style="text-align:center;padding:10px 0;">
+          <img v-if="exportImageData" :src="exportImageData" style="max-width:100%;max-height:200px;border:1px solid #e5e6eb;border-radius:8px;object-fit:contain;" />
+          <div v-else style="color:#999;padding:40px 0;font-size:13px;">正在生成高清图片...</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="ghost" @click="showExport=false">关闭</button>
+        <button v-if="exportFmt!=='png'" class="solid" @click="copyExport">📋 复制</button>
+        <button v-else class="solid" @click="downloadImage">💾 下载 PNG</button>
+      </div>
+    </div>
+  </div>
+  <!-- 确认 -->
+  <div class="modal-mask" :class="{show:showConfirm}" @click.self="showConfirm=false">
+    <div class="modal" style="max-width:400px;">
+      <div class="modal-header"><span>{{ confirmTitle }}</span></div>
+      <div class="modal-body"><p class="confirm-msg">{{ confirmMsg }}</p></div>
+      <div class="modal-footer">
+        <button class="ghost" @click="showConfirm=false">取消</button>
+        <button class="solid" @click="doConfirm">确定</button>
+      </div>
+    </div>
+  </div>
+  <!-- 帮助 -->
+  <div class="modal-mask" :class="{show:showHelpModal}" @click.self="showHelpModal=false">
+    <div class="modal">
+      <div class="modal-header"><span>使用帮助</span><button class="close" @click="showHelpModal=false">×</button></div>
+      <div class="modal-body">
+        <div class="confirm-msg">
+          <p><strong>📁 多导图：</strong>顶部标签栏切换不同导图，点「＋」新建；「📁」管理（重命名/删除）</p>
+          <p><strong>🌱 单画布多导图：</strong>点顶部「🌱」在当前画布添加新的根节点，多个导图可同屏显示</p>
+          <p><strong>✋ 拖动节点：</strong>鼠标按住任意节点拖动，整个子树跟随移动；「更多→重置节点位置」恢复自动布局</p>
+          <p><strong>📌 选中节点：</strong>单击节点</p>
+          <p><strong>✏️ 编辑文字：</strong>双击节点，或按 F2 / 更多→编辑节点文字</p>
+          <p><strong>⌨️ 快捷键：</strong>Tab 加子节点、Enter 加同级、Delete 删除、Ctrl+滚轮/± 缩放、Ctrl+0 适应窗口</p>
+          <p><strong>🏷 标签：</strong>选中后点「标签」，点击节点上方标签可联想高亮同标签节点</p>
+          <p><strong>🔗 连接：</strong>选中后点「连接」再点另一节点；更多→管理连接可写批注、删除</p>
+          <p><strong>✋ 移动画布：</strong>鼠标拖拽空白区域（不要按在节点上）</p>
+          <p><strong>🔍 缩放：</strong>鼠标滚轮，或点顶部「⛶」</p>
+          <p><strong>💾 自动保存：</strong>所有导图自动存到本机浏览器</p>
+        </div>
+      </div>
+      <div class="modal-footer"><button class="solid" @click="showHelpModal=false">知道了</button></div>
+    </div>
+  </div>
+  <div class="toast" :class="{show:toastMsg}">{{ toastMsg }}</div>
+</div>
+<script src="vendor/vue.global.prod.min.js"></script>
+<script>
+const { createApp, ref, reactive, computed, onMounted, nextTick, watch } = Vue;
+createApp({
+  setup() {
+    const NW = 150, NH = 40, ROOT_H = 46, VGAP = 60, HGAP = 20, ROOT_GAP = 100;
+    const STORAGE_KEY = 'mindmap_pc_v1';
+    const COLORS = [
+      {bg:'#e8f5e9', border:'#43a047', text:'#1b5e20'},
+      {bg:'#e3f2fd', border:'#1e88e5', text:'#0d47a1'},
+      {bg:'#fff3e0', border:'#fb8c00', text:'#e65100'},
+      {bg:'#fce4ec', border:'#e53935', text:'#b71c1c'},
+      {bg:'#f3e5f5', border:'#8e24aa', text:'#4a148c'},
+      {bg:'#e0f7fa', border:'#00acc1', text:'#006064'},
+      {bg:'#fff9c4', border:'#fdd835', text:'#f57f17'},
+      {bg:'#efebe9', border:'#6d4c41', text:'#3e2723'}
+    ];
+    let nextId = 1;
+    let connId = 1;
+    let mapId = 1;
+    const makeNode = (text, children, tags) => ({ id: nextId++, text, children: children || [], tags: tags || [], offsetX: 0, offsetY: 0 });
+    const makeMap = (name, roots) => ({ id: 'map_' + (mapId++), name: name || '未命名导图', roots: roots || [], connections: [], createdAt: Date.now(), updatedAt: Date.now() });
+    const templateRoots = () => [
+      makeNode('复盘', [
+        makeNode('回顾目标', [makeNode('当初目标是什么'), makeNode('目标如何制定'), makeNode('期望与实际对比')]),
+        makeNode('评估结果', [makeNode('做得好的'), makeNode('做得差的'), makeNode('意外情况')]),
+        makeNode('分析原因', [makeNode('成功因素'), makeNode('失败根因'), makeNode('关键决策')]),
+        makeNode('总结规律', [makeNode('可复制经验'), makeNode('要避开的坑'), makeNode('认知更新')]),
+        makeNode('行动计划', [makeNode('继续做'), makeNode('停止做'), makeNode('开始做'), makeNode('待跟进')])
+      ])
+    ];
+    const normalizeNode = (n) => {
+      if (!n.children) n.children = [];
+      if (!n.tags) n.tags = [];
+      if (n.offsetX === undefined) n.offsetX = 0;
+      if (n.offsetY === undefined) n.offsetY = 0;
+      n.children.forEach(normalizeNode);
+      let maxId = 0;
+      const walk = (x) => { if (x.id > maxId) maxId = x.id; x.children.forEach(walk); };
+      walk(n);
+      if (maxId >= nextId) nextId = maxId + 1;
+    };
+    // ===== 多导图存储 =====
+    const maps = ref([]);
+    const currentMapId = ref(null);
+    const currentMap = computed(() => maps.value.find(m => m.id === currentMapId.value) || maps.value[0] || null);
+    const loadMaps = () => {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const data = JSON.parse(raw);
+          if (data.maps && data.maps.length) {
+            data.maps.forEach(m => {
+              if (!m.roots) m.roots = [];
+              m.roots.forEach(normalizeNode);
+              if (!m.connections) m.connections = [];
+              m.connections.forEach(c => { if (c.note === undefined) c.note = ''; if (c.id >= connId) connId = c.id + 1; });
+              const mid = parseInt((m.id || '').replace('map_', ''));
+              if (mid >= mapId) mapId = mid + 1;
+            });
+            maps.value = data.maps;
+            currentMapId.value = data.currentMapId || data.maps[0].id;
+            return;
+          }
+        }
+      } catch(e) {}
+      const m = makeMap('复盘模板', templateRoots());
+      maps.value = [m];
+      currentMapId.value = m.id;
+    };
+    const saveMaps = () => {
+      try {
+        if (currentMap.value) currentMap.value.updatedAt = Date.now();
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ maps: maps.value, currentMapId: currentMapId.value }));
+      } catch(e) {}
+    };
+    const switchMap = (id) => { currentMapId.value = id; selectedId.value = null; connectingFrom.value = null; activeTag.value = null; nextTick(fitView); };
+    const newMap = () => {
+      const m = makeMap('导图 ' + (maps.value.length + 1), [makeNode('中心主题')]);
+      maps.value.push(m);
+      currentMapId.value = m.id;
+      selectedId.value = null;
+      saveMaps();
+      showMapManager.value = false;
+      nextTick(fitView);
+      toast('已新建导图');
+    };
+    const deleteMap = (id) => {
+      if (maps.value.length <= 1) { toast('至少保留一个导图'); return; }
+      askConfirm('删除导图', '确定删除这个导图吗？此操作不可恢复。', () => {
+        maps.value = maps.value.filter(m => m.id !== id);
+        if (currentMapId.value === id) currentMapId.value = maps.value[0].id;
+        saveMaps();
+        nextTick(fitView);
+      });
+    };
+    const renamingMap = ref(false);
+    const renameText = ref('');
+    const renameInput = ref(null);
+    let renamingMapId = null;
+    const startRenameMap = (id) => {
+      const m = maps.value.find(x => x.id === id);
+      if (!m) return;
+      renamingMapId = id;
+      renameText.value = m.name;
+      renamingMap.value = true;
+      nextTick(() => { if (renameInput.value) { renameInput.value.focus(); renameInput.value.select(); } });
+    };
+    const saveRenameMap = () => {
+      const m = maps.value.find(x => x.id === renamingMapId);
+      if (m && renameText.value.trim()) { m.name = renameText.value.trim(); saveMaps(); }
+      renamingMap.value = false;
+      renamingMapId = null;
+    };
+    const cancelRenameMap = () => { renamingMap.value = false; renamingMapId = null; };
+    const formatTime = (ts) => {
+      if (!ts) return '';
+      const d = new Date(ts);
+      return (d.getMonth()+1) + '/' + d.getDate() + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+    };
+    // 在当前画布新建根节点
+    const newRootInCurrent = () => {
+      if (!currentMap.value) return;
+      const root = makeNode('新导图');
+      currentMap.value.roots.push(root);
+      selectedId.value = root.id;
+      saveMaps();
+      nextTick(fitView);
+      toast('已在当前画布添加新导图');
+    };
+    // 清空当前画布
+    const confirmClearCurrent = () => {
+      showMenu.value = false;
+      askConfirm('清空当前画布', '确定清空当前画布的所有内容吗？', () => {
+        if (currentMap.value) {
+          currentMap.value.roots = [makeNode('中心主题')];
+          currentMap.value.connections = [];
+        }
+        selectedId.value = null;
+        saveMaps();
+        nextTick(fitView);
+      });
+    };
+    // ===== 通用状态 =====
+    const selectedId = ref(null);
+    const connectingFrom = ref(null);
+    const activeTag = ref(null);
+    const editing = ref(false);
+    const editText = ref('');
+    const editInput = ref(null);
+    const editingTag = ref(false);
+    const tagInput = ref('');
+    const tagInputEl = ref(null);
+    const wrapRef = ref(null);
+    const view = reactive({ tx: 0, ty: 0, scale: 1 });
+    const dragNodeId = ref(null);
+    let dragState = null;
+    const showMenu = ref(false);
+    const showMapManager = ref(false);
+    const showConnManager = ref(false);
+    const showExport = ref(false);
+    const exportFmt = ref('md');
+    const exportImageData = ref('');
+    const showConfirm = ref(false);
+    const confirmTitle = ref('');
+    const confirmMsg = ref('');
+    let confirmCb = null;
+    const showHelpModal = ref(false);
+    const toastMsg = ref('');
+    let toastTimer = null;
+    const toast = (msg) => { toastMsg.value = msg; clearTimeout(toastTimer); toastTimer = setTimeout(() => toastMsg.value = '', 1500); };
+    // ===== 夜间模式 =====
+    const PREF_KEY = 'mindmap_pc_pref_v1';
+    const darkMode = ref(false);
+    const loadPref = () => {
+      try {
+        const raw = localStorage.getItem(PREF_KEY);
+        if (raw) {
+          const p = JSON.parse(raw);
+          if (p.darkMode) darkMode.value = true;
+        }
+      } catch(e) {}
+      applyPref();
+    };
+    const savePref = () => {
+      try { localStorage.setItem(PREF_KEY, JSON.stringify({ darkMode: darkMode.value })); } catch(e) {}
+    };
+    const applyPref = () => {
+      document.body.classList.toggle('dark', darkMode.value);
+    };
+    const toggleDark = () => {
+      darkMode.value = !darkMode.value;
+      applyPref(); savePref();
+      toast(darkMode.value ? '夜间模式' : '日间模式');
+    };
+    // ===== 树工具（跨所有根节点） =====
+    const findNode = (id) => {
+      if (!currentMap.value) return null;
+      for (const root of currentMap.value.roots) {
+        const r = findInNode(root, id);
+        if (r) return r;
+      }
+      return null;
+    };
+    const findInNode = (node, id) => {
+      if (node.id === id) return node;
+      for (const c of node.children) { const r = findInNode(c, id); if (r) return r; }
+      return null;
+    };
+    const findParent = (id) => {
+      if (!currentMap.value) return null;
+      for (const root of currentMap.value.roots) {
+        const r = findParentInNode(root, id, null);
+        if (r !== undefined) return r;
+      }
+      return null;
+    };
+    const findParentInNode = (node, id, parent) => {
+      if (node.id === id) return parent;
+      for (const c of node.children) {
+        const r = findParentInNode(c, id, node);
+        if (r !== undefined) return r;
+      }
+      return undefined;
+    };
+    const isRootNode = (id) => {
+      if (!currentMap.value) return false;
+      return currentMap.value.roots.some(r => r.id === id);
+    };
+    const isRootSelected = computed(() => isRootNode(selectedId.value));
+    // ===== 布局（多根节点） =====
+    const layout = computed(() => {
+      const map = currentMap.value;
+      const allNodes = [];
+      const allLinks = [];
+      if (!map || !map.roots.length) return { nodes: allNodes, links: allLinks, width: 300, height: 200 };
+      let curX = 60;
+      map.roots.forEach((root, rootIdx) => {
+        const widthMap = new Map();
+        const calcWidth = (node) => {
+          if (!node.children || !node.children.length) { widthMap.set(node.id, NW); return NW; }
+          let total = 0;
+          for (const c of node.children) total += calcWidth(c);
+          total += (node.children.length - 1) * HGAP;
+          const w = Math.max(NW, total);
+          widthMap.set(node.id, w);
+          return w;
+        };
+        calcWidth(root);
+        const rootW = widthMap.get(root.id);
+        const posMap = new Map();
+        const branchMap = new Map();
+        const assignBranch = (node, branch) => {
+          branchMap.set(node.id, branch);
+          if (node.children) node.children.forEach((c, i) => assignBranch(c, node === root ? i : branch));
+        };
+        assignBranch(root, 0);
+        const position = (node, cx, depth, accOX, accOY) => {
+          const myOX = node.offsetX || 0;
+          const myOY = node.offsetY || 0;
+          const fx = cx + myOX + accOX;
+          const fy = depth * (NH + VGAP) + myOY + accOY;
+          posMap.set(node.id, { cx: fx, y: fy, depth });
+          if (node.children && node.children.length) {
+            let total = 0;
+            for (const c of node.children) total += widthMap.get(c.id);
+            total += (node.children.length - 1) * HGAP;
+            let x = fx - total / 2;
+            for (const c of node.children) {
+              position(c, x + widthMap.get(c.id)/2, depth+1, accOX + myOX, accOY + myOY);
+              x += widthMap.get(c.id) + HGAP;
+            }
+          }
+        };
+        position(root, curX + rootW/2, 0, 0, 0);
+        // 收集
+        const collect = (node) => {
+          const p = posMap.get(node.id);
+          const branch = branchMap.get(node.id);
+          const h = node === root ? ROOT_H : NH;
+          const col = node === root
+            ? { bg: '#1a7f5a', border: '#1a7f5a', text: '#fff' }
+            : p.depth === 1
+              ? COLORS[branch % COLORS.length]
+              : { bg: '#fff', border: COLORS[branch % COLORS.length].border, text: '#333' };
+          allNodes.push({
+            id: node.id, text: node.text, tags: node.tags || [],
+            x: p.cx - NW/2, y: p.y,
+            isRoot: node === root, bg: col.bg, border: col.border, textColor: col.text
+          });
+          if (node.children) node.children.forEach(c => {
+            const cp = posMap.get(c.id);
+            const px = p.cx, py = p.y + h;
+            const cx2 = cp.cx, cy2 = cp.y;
+            const mid = (py + cy2) / 2;
+            allLinks.push({
+              id: node.id + '-' + c.id,
+              d: 'M' + px + ',' + py + ' C' + px + ',' + mid + ' ' + cx2 + ',' + mid + ' ' + cx2 + ',' + cy2,
+              color: COLORS[branchMap.get(c.id) % COLORS.length].border
+            });
+            collect(c);
+          });
+        };
+        collect(root);
+        curX += rootW + ROOT_GAP;
+      });
+      // 边界
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      allNodes.forEach(n => {
+        const h = n.isRoot ? ROOT_H : NH;
+        minX = Math.min(minX, n.x); maxX = Math.max(maxX, n.x + NW);
+        minY = Math.min(minY, n.y); maxY = Math.max(maxY, n.y + h);
+      });
+      if (!isFinite(minX)) { minX = 0; maxX = 300; minY = 0; maxY = 200; }
+      const pad = 60;
+      const W = maxX - minX + pad * 2;
+      const H = maxY - minY + pad * 2;
+      const ox = pad - minX, oy = pad - minY;
+      allNodes.forEach(n => { n.x += ox; n.y += oy; });
+      allLinks.forEach(l => {
+        // 重新计算带偏移的path（简单方式：解析数字加偏移）
+        const nums = l.d.match(/-?\d+\.?\d*/g).map(Number);
+        if (nums.length >= 8) {
+          l.d = 'M' + (nums[0]+ox) + ',' + (nums[1]+oy) + ' C' + (nums[2]+ox) + ',' + (nums[3]+oy) + ' ' + (nums[4]+ox) + ',' + (nums[5]+oy) + ' ' + (nums[6]+ox) + ',' + (nums[7]+oy);
+        }
+      });
+      return { nodes: allNodes, links: allLinks, width: W, height: H };
+    });
+    // 节点坐标映射
+    const nodePosMap = computed(() => {
+      const m = new Map();
+      layout.value.nodes.forEach(n => m.set(n.id, { cx: n.x + NW/2, cy: n.y + (n.isRoot ? ROOT_H : NH)/2 }));
+      return m;
+    });
+    // 自由连接线
+    const connLines = computed(() => {
+      const lines = [];
+      if (!currentMap.value) return lines;
+      const pm = nodePosMap.value;
+      currentMap.value.connections.forEach(c => {
+        const a = pm.get(c.from), b = pm.get(c.to);
+        if (a && b) {
+          const mx = (a.cx + b.cx) / 2;
+          const my = (a.cy + b.cy) / 2 - 40;
+          lines.push({ id: c.id, d: 'M' + a.cx + ',' + a.cy + ' Q' + mx + ',' + my + ' ' + b.cx + ',' + b.cy });
+        }
+      });
+      return lines;
+    });
+    // 连接批注标签
+    const connNotes = computed(() => {
+      const notes = [];
+      if (!currentMap.value) return notes;
+      const pm = nodePosMap.value;
+      currentMap.value.connections.forEach(c => {
+        if (!c.note || !c.note.trim()) return;
+        const a = pm.get(c.from), b = pm.get(c.to);
+        if (a && b) notes.push({ id: c.id, text: c.note, x: (a.cx + b.cx)/2, y: (a.cy + b.cy)/2 - 30 });
+      });
+      return notes;
+    });
+    // 标签联想线
+    const relatedLines = computed(() => {
+      if (!activeTag.value) return [];
+      const tagged = [];
+      const pm = nodePosMap.value;
+      layout.value.nodes.forEach(n => {
+        const node = findNode(n.id);
+        if (node && node.tags && node.tags.indexOf(activeTag.value) >= 0) tagged.push(pm.get(n.id));
+      });
+      const lines = [];
+      for (let i = 0; i < tagged.length; i++)
+        for (let j = i+1; j < tagged.length; j++) {
+          const a = tagged[i], b = tagged[j];
+          lines.push({ id: 'rel_'+i+'_'+j, d: 'M'+a.cx+','+a.cy+' L'+b.cx+','+b.cy });
+        }
+      return lines;
+    });
+    const isRelated = (id) => {
+      if (!activeTag.value) return false;
+      const n = findNode(id);
+      return n && n.tags && n.tags.indexOf(activeTag.value) >= 0;
+    };
+    const connList = computed(() => {
+      if (!currentMap.value) return [];
+      return currentMap.value.connections.map(c => {
+        const a = findNode(c.from), b = findNode(c.to);
+        return { id: c.id, fromText: a ? a.text : '?', toText: b ? b.text : '?', note: c.note || '' };
+      });
+    });
+    const canvasStyle = computed(() => ({
+      width: layout.value.width + 'px',
+      height: layout.value.height + 'px',
+      transform: 'translate(' + view.tx + 'px,' + view.ty + 'px) scale(' + view.scale + ')'
+    }));
+    // ===== 视图 =====
+    const fitView = () => {
+      const wrap = wrapRef.value;
+      if (!wrap) return;
+      const ww = wrap.clientWidth, wh = wrap.clientHeight;
+      const W = layout.value.width, H = layout.value.height;
+      if (!W || !H || !isFinite(W) || !isFinite(H)) return;
+      view.scale = Math.min(ww / (W + 30), wh / (H + 30), 1.5);
+      if (view.scale < 0.1) view.scale = 0.1;
+      view.tx = (ww - W * view.scale) / 2;
+      view.ty = 20;
+    };
+    // ===== 画布触摸 =====
+    let touchState = null;
+    const onCanvasTouchStart = (e) => {
+      if (editing.value || editingTag.value || renamingMap.value) return;
+      if (e.touches.length === 2) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        touchState = { type:'pinch', dist:Math.sqrt(dx*dx+dy*dy), scale:view.scale, tx:view.tx, ty:view.ty };
+      } else if (e.touches.length === 1) {
+        touchState = { type:'pan', startX:e.touches[0].clientX, startY:e.touches[0].clientY, tx:view.tx, ty:view.ty, moved:false };
+      }
+    };
+    const onCanvasTouchMove = (e) => {
+      if (!touchState) return;
+      e.preventDefault();
+      if (touchState.type === 'pinch' && e.touches.length === 2) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        const dist = Math.sqrt(dx*dx+dy*dy);
+        const wrap = wrapRef.value;
+        if (wrap) {
+          const rect = wrap.getBoundingClientRect();
+          const cx = (e.touches[0].clientX + e.touches[1].clientX)/2 - rect.left;
+          const cy = (e.touches[0].clientY + e.touches[1].clientY)/2 - rect.top;
+          const wx = (cx - touchState.tx)/touchState.scale, wy = (cy - touchState.ty)/touchState.scale;
+          view.scale = Math.max(0.15, Math.min(3, touchState.scale * dist/touchState.dist));
+          view.tx = cx - wx*view.scale; view.ty = cy - wy*view.scale;
+        }
+      } else if (touchState.type === 'pan' && e.touches.length === 1) {
+        const dx = e.touches[0].clientX - touchState.startX;
+        const dy = e.touches[0].clientY - touchState.startY;
+        if (Math.abs(dx)>5 || Math.abs(dy)>5) touchState.moved = true;
+        view.tx = touchState.tx + dx; view.ty = touchState.ty + dy;
+      }
+    };
+    const onCanvasTouchEnd = (e) => {
+      if (touchState && touchState.type === 'pan' && !touchState.moved && e.changedTouches.length === 1) {
+        if (connectingFrom.value !== null) connectingFrom.value = null;
+        else { selectedId.value = null; activeTag.value = null; }
+      }
+      touchState = null;
+    };
+    // 滚轮缩放（以鼠标位置为锚点）
+    const onWheel = (e) => {
+      const wrap = wrapRef.value;
+      if (!wrap) return;
+      const rect = wrap.getBoundingClientRect();
+      const cx = e.clientX - rect.left, cy = e.clientY - rect.top;
+      const factor = e.deltaY < 0 ? 1.12 : 1/1.12;
+      const ns = Math.max(0.15, Math.min(3, view.scale * factor));
+      const wx = (cx - view.tx)/view.scale, wy = (cy - view.ty)/view.scale;
+      view.scale = ns;
+      view.tx = cx - wx*ns; view.ty = cy - wy*ns;
+    };
+    // 鼠标拖拽画布
+    let mouseState = null;
+    const onCanvasMouseDown = (e) => {
+      if (e.target.closest('.node') || editing.value || editingTag.value) return;
+      mouseState = { startX:e.clientX, startY:e.clientY, tx:view.tx, ty:view.ty, moved:false };
+      const onMove = (ev) => {
+        const dx = ev.clientX - mouseState.startX;
+        const dy = ev.clientY - mouseState.startY;
+        if (Math.abs(dx)>3 || Math.abs(dy)>3) mouseState.moved = true;
+        view.tx = mouseState.tx + dx; view.ty = mouseState.ty + dy;
+      };
+      const onUp = () => {
+        if (!mouseState.moved) {
+          if (connectingFrom.value !== null) connectingFrom.value = null;
+          else { selectedId.value = null; activeTag.value = null; }
+        }
+        mouseState = null;
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('mouseup', onUp);
+      };
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+    };
+    // ===== 节点拖动 + 点击 =====
+    let lastTapTime = 0, lastTapNode = null;
+    const onNodeTouchStart = (node, e) => {
+      if (editing.value || editingTag.value || renamingMap.value) return;
+      const t = e.touches[0];
+      dragState = {
+        nodeId: node.id,
+        startX: t.clientX, startY: t.clientY,
+        offsetX: node.offsetX || 0, offsetY: node.offsetY || 0,
+        moved: false, startTime: Date.now()
+      };
+    };
+    const onNodeTouchMove = (e) => {
+      if (!dragState) return;
+      e.preventDefault();
+      const t = e.touches[0];
+      const dx = (t.clientX - dragState.startX) / view.scale;
+      const dy = (t.clientY - dragState.startY) / view.scale;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+        dragState.moved = true;
+        dragNodeId.value = dragState.nodeId;
+        const node = findNode(dragState.nodeId);
+        if (node) {
+          node.offsetX = dragState.offsetX + dx;
+          node.offsetY = dragState.offsetY + dy;
+        }
+      }
+    };
+    const onNodeTouchEnd = (node, e) => {
+      if (dragState && dragState.moved) {
+        saveMaps();
+        dragNodeId.value = null;
+        dragState = null;
+        return;
+      }
+      // 双击检测
+      const now = Date.now();
+      if (now - lastTapTime < 300 && lastTapNode === node.id) {
+        lastTapTime = 0;
+        openEditFor(node);
+        dragState = null;
+        return;
+      }
+      lastTapTime = now;
+      lastTapNode = node.id;
+      dragState = null;
+    };
+    // 鼠标拖动
+    const onNodeMouseDown = (node, e) => {
+      if (editing.value || editingTag.value) return;
+      dragState = { nodeId: node.id, startX: e.clientX, startY: e.clientY, offsetX: node.offsetX||0, offsetY: node.offsetY||0, moved:false, startTime: Date.now() };
+      dragNodeId.value = node.id;
+      const onMove = (ev) => {
+        if (!dragState) return;
+        const dx = (ev.clientX - dragState.startX)/view.scale;
+        const dy = (ev.clientY - dragState.startY)/view.scale;
+        if (Math.abs(dx)>4 || Math.abs(dy)>4) {
+          dragState.moved = true;
+          const n = findNode(dragState.nodeId);
+          if (n) { n.offsetX = dragState.offsetX + dx; n.offsetY = dragState.offsetY + dy; }
+        }
+      };
+      const onUp = () => {
+        if (dragState) {
+          if (dragState.moved) saveMaps();
+          dragNodeId.value = null;
+          dragState = null;
+        }
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('mouseup', onUp);
+      };
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+    };
+    const onNodeClick = (node) => {
+      if (dragState && dragState.moved) return;
+      if (connectingFrom.value !== null) {
+        if (connectingFrom.value !== node.id) {
+          const exists = currentMap.value.connections.some(c =>
+            (c.from === connectingFrom.value && c.to === node.id) || (c.from === node.id && c.to === connectingFrom.value));
+          if (!exists) {
+            currentMap.value.connections.push({ id: connId++, from: connectingFrom.value, to: node.id, note: '' });
+            saveMaps();
+            toast('已创建连接');
+          } else toast('连接已存在');
+        }
+        connectingFrom.value = null;
+        return;
+      }
+      selectedId.value = node.id;
+    };
+    // 重置节点位置
+    const resetNodePosition = () => {
+      showMenu.value = false;
+      if (!selectedId.value) { toast('请先选中节点'); return; }
+      const n = findNode(selectedId.value);
+      if (n) { n.offsetX = 0; n.offsetY = 0; saveMaps(); toast('已重置位置'); }
+    };
+    // ===== 节点操作 =====
+    const addChild = () => {
+      const n = findNode(selectedId.value);
+      if (!n) return;
+      const child = makeNode('新节点');
+      n.children.push(child);
+      selectedId.value = child.id;
+      saveMaps();
+      nextTick(fitView);
+    };
+    const addSibling = () => {
+      if (isRootSelected.value) { toast('根节点不能加同级，可新建导图'); return; }
+      const p = findParent(selectedId.value);
+      if (!p) return;
+      const idx = p.children.findIndex(c => c.id === selectedId.value);
+      const sib = makeNode('新节点');
+      p.children.splice(idx+1, 0, sib);
+      selectedId.value = sib.id;
+      saveMaps();
+      nextTick(fitView);
+    };
+    const deleteNode = () => {
+      const id = selectedId.value;
+      if (!id) return;
+      if (isRootNode(id)) {
+        // 删除根节点（整个导图分支）
+        if (currentMap.value.roots.length <= 1) { toast('至少保留一个根节点'); return; }
+        askConfirm('删除导图', '确定删除这个根节点及其所有子节点吗？', () => {
+          currentMap.value.roots = currentMap.value.roots.filter(r => r.id !== id);
+          currentMap.value.connections = currentMap.value.connections.filter(c => c.from !== id && c.to !== id);
+          selectedId.value = null;
+          saveMaps();
+          nextTick(fitView);
+        });
+        return;
+      }
+      const p = findParent(id);
+      if (!p) return;
+      p.children = p.children.filter(c => c.id !== id);
+      currentMap.value.connections = currentMap.value.connections.filter(c => c.from !== id && c.to !== id);
+      selectedId.value = null;
+      saveMaps();
+    };
+    const openEdit = () => { showMenu.value = false; const n = findNode(selectedId.value); if (n) openEditFor(n); };
+    const openEditFor = (node) => {
+      selectedId.value = node.id;
+      editText.value = node.text;
+      editing.value = true;
+      nextTick(() => { if (editInput.value) { editInput.value.focus(); editInput.value.select(); } });
+    };
+    const saveEdit = () => {
+      const n = findNode(selectedId.value);
+      if (n) { n.text = editText.value.trim() || '未命名'; saveMaps(); }
+      editing.value = false;
+    };
+    const cancelEdit = () => { editing.value = false; };
+    // 标签
+    const openTagEditor = () => {
+      const n = findNode(selectedId.value);
+      if (!n) return;
+      tagInput.value = (n.tags || []).join(', ');
+      editingTag.value = true;
+      nextTick(() => { if (tagInputEl.value) tagInputEl.value.focus(); });
+    };
+    const saveTag = () => {
+      const n = findNode(selectedId.value);
+      if (n) { n.tags = tagInput.value.split(/[,，]/).map(t => t.trim()).filter(t => t); saveMaps(); toast('标签已保存'); }
+      editingTag.value = false;
+    };
+    const cancelTag = () => { editingTag.value = false; };
+    const toggleTagRelation = (tag) => { activeTag.value = activeTag.value === tag ? null : tag; };
+    // 连接
+    const startConnect = () => {
+      if (!selectedId.value) { toast('请先选中节点'); return; }
+      connectingFrom.value = connectingFrom.value === selectedId.value ? null : selectedId.value;
+      activeTag.value = null;
+    };
+    const deleteConnection = (id) => {
+      currentMap.value.connections = currentMap.value.connections.filter(c => c.id !== id);
+      saveMaps();
+    };
+    const updateConnNote = (id, val) => {
+      const c = currentMap.value.connections.find(x => x.id === id);
+      if (c) { c.note = val; saveMaps(); }
+    };
+    const editConnNote = (id) => { showConnManager.value = true; };
+    const openConnManager = () => { showMenu.value = false; showConnManager.value = true; };
+    // ===== 导出 =====
+    const openExport = () => { showMenu.value = false; showExport.value = true; };
+    const exportContent = computed(() => {
+      if (!currentMap.value) return '';
+      if (exportFmt.value === 'md') {
+        let s = '# ' + currentMap.value.name + '\n\n';
+        currentMap.value.roots.forEach((root, idx) => {
+          if (currentMap.value.roots.length > 1) s += '## 导图' + (idx+1) + ': ' + root.text + '\n';
+          const w = (n, d) => {
+            const tagStr = n.tags && n.tags.length ? ' [' + n.tags.join(',') + ']' : '';
+            s += '  '.repeat(d) + '- ' + n.text + tagStr + '\n';
+            n.children.forEach(c => w(c, d+1));
+          };
+          w(root, 0);
+          s += '\n';
+        });
+        if (currentMap.value.connections.length) {
+          s += '## 连接关系\n';
+          currentMap.value.connections.forEach(c => {
+            const a = findNode(c.from), b = findNode(c.to);
+            s += '- ' + (a?a.text:'?') + ' ⇄ ' + (b?b.text:'?') + (c.note ? '（' + c.note + '）' : '') + '\n';
+          });
+        }
+        return s;
+      } else {
+        let s = 'mindmap\n';
+        if (currentMap.value.roots.length > 1) {
+          s += '  root((' + currentMap.value.name + '))\n';
+          currentMap.value.roots.forEach(root => {
+            const w = (n, d) => {
+              s += '  '.repeat(d) + n.text + '\n';
+              n.children.forEach(c => w(c, d+1));
+            };
+            w(root, 2);
+          });
+        } else {
+          const w = (n, d) => {
+            s += '  '.repeat(d) + (d===1 ? 'root((' + n.text + '))' : n.text) + '\n';
+            n.children.forEach(c => w(c, d+1));
+          };
+          w(currentMap.value.roots[0], 1);
+        }
+        return s;
+      }
+    });
+    const copyExport = async () => {
+      try { await navigator.clipboard.writeText(exportContent.value); toast('已复制到剪贴板'); }
+      catch(e) { const ta = document.querySelector('.export-text'); if (ta) { ta.select(); document.execCommand('copy'); toast('已复制'); } }
+    };
+    // 导出图片
+    const generateImage = () => {
+      const W = layout.value.width, H = layout.value.height;
+      if (!W || !H || !isFinite(W) || !isFinite(H)) return;
+      const canvas = document.createElement('canvas');
+      const dpr = 2;
+      canvas.width = W * dpr; canvas.height = H * dpr;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
+      const roundRect = (x, y, w, h, r) => {
+        ctx.beginPath();
+        ctx.moveTo(x+r, y); ctx.lineTo(x+w-r, y);
+        ctx.quadraticCurveTo(x+w, y, x+w, y+r); ctx.lineTo(x+w, y+h-r);
+        ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h); ctx.lineTo(x+r, y+h);
+        ctx.quadraticCurveTo(x, y+h, x, y+h-r); ctx.lineTo(x, y+r);
+        ctx.quadraticCurveTo(x, y, x+r, y); ctx.closePath();
+      };
+      const drawPath = (d) => {
+        const nums = d.match(/-?\d+\.?\d*/g).map(Number);
+        if (d.includes('C') && nums.length >= 8) {
+          ctx.moveTo(nums[0], nums[1]);
+          ctx.bezierCurveTo(nums[2], nums[3], nums[4], nums[5], nums[6], nums[7]);
+        } else if (d.includes('Q') && nums.length >= 6) {
+          ctx.moveTo(nums[0], nums[1]);
+          ctx.quadraticCurveTo(nums[2], nums[3], nums[4], nums[5]);
+        } else if (d.includes('L') && nums.length >= 4) {
+          ctx.moveTo(nums[0], nums[1]); ctx.lineTo(nums[2], nums[3]);
+        }
+      };
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = '#eeeeee';
+      for (let gx = 12; gx < W; gx += 24) for (let gy = 12; gy < H; gy += 24) { ctx.beginPath(); ctx.arc(gx, gy, 1, 0, Math.PI*2); ctx.fill(); }
+      ctx.lineWidth = 2;
+      layout.value.links.forEach(l => { ctx.strokeStyle = l.color; ctx.globalAlpha = 0.5; ctx.beginPath(); drawPath(l.d); ctx.stroke(); });
+      connLines.value.forEach(c => {
+        ctx.strokeStyle = '#ff9800'; ctx.globalAlpha = 0.7; ctx.lineWidth = 2; ctx.setLineDash([6,4]);
+        ctx.beginPath(); drawPath(c.d); ctx.stroke(); ctx.setLineDash([]);
+      });
+      ctx.globalAlpha = 1;
+      layout.value.nodes.forEach(n => {
+        const h = n.isRoot ? ROOT_H : NH;
+        roundRect(n.x, n.y, NW, h, 8);
+        ctx.fillStyle = n.bg; ctx.fill();
+        ctx.strokeStyle = n.border; ctx.lineWidth = 2; ctx.stroke();
+        ctx.fillStyle = n.textColor;
+        ctx.font = (n.isRoot ? 'bold 14px ' : '13px ') + '"Microsoft YaHei","PingFang SC",sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        let text = n.text; const maxW = NW - 16;
+        if (ctx.measureText(text).width > maxW) { while (text.length > 0 && ctx.measureText(text+'…').width > maxW) text = text.slice(0,-1); text += '…'; }
+        ctx.fillText(text, n.x + NW/2, n.y + h/2);
+        if (n.tags && n.tags.length) {
+          ctx.font = '10px "Microsoft YaHei",sans-serif';
+          const tags = n.tags.slice(0,2);
+          let totalW = 0;
+          tags.forEach(t => { totalW += ctx.measureText(t).width + 12; });
+          totalW += (tags.length-1)*3;
+          if (n.tags.length > 2) totalW += ctx.measureText('+'+(n.tags.length-2)).width + 13;
+          let curX = n.x + NW/2 - totalW/2;
+          const ty = n.y - 18, th = 16;
+          tags.forEach(t => {
+            const tw = ctx.measureText(t).width + 12;
+            roundRect(curX, ty, tw, th, 8);
+            ctx.fillStyle = '#ff9800'; ctx.fill();
+            ctx.fillStyle = '#fff'; ctx.fillText(t, curX + tw/2, ty + th/2);
+            curX += tw + 3;
+          });
+          if (n.tags.length > 2) {
+            const tw = ctx.measureText('+'+(n.tags.length-2)).width + 10;
+            roundRect(curX, ty, tw, th, 8);
+            ctx.fillStyle = '#ff9800'; ctx.fill();
+            ctx.fillStyle = '#fff'; ctx.fillText('+'+(n.tags.length-2), curX+tw/2, ty+th/2);
+          }
+        }
+      });
+      connNotes.value.forEach(note => {
+        ctx.font = '11px "Microsoft YaHei",sans-serif';
+        const text = note.text;
+        let tw = ctx.measureText(text).width + 24;
+        tw = Math.min(tw, 170);
+        const th = 24;
+        roundRect(note.x - tw/2, note.y - th/2, tw, th, 12);
+        ctx.fillStyle = 'rgba(255,255,255,0.95)'; ctx.fill();
+        ctx.strokeStyle = '#ff9800'; ctx.lineWidth = 1; ctx.stroke();
+        ctx.fillStyle = '#e65100'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        let dt = text;
+        if (ctx.measureText(dt).width > tw - 20) { while (dt.length > 0 && ctx.measureText(dt+'…').width > tw-20) dt = dt.slice(0,-1); dt += '…'; }
+        ctx.fillText('📝 ' + dt, note.x, note.y);
+      });
+      exportImageData.value = canvas.toDataURL('image/png');
+    };
+    const downloadImage = () => {
+      if (!exportImageData.value) generateImage();
+      if (!exportImageData.value) return;
+      const a = document.createElement('a');
+      a.href = exportImageData.value;
+      a.download = (currentMap.value ? currentMap.value.name : '思维导图') + '_' + new Date().toISOString().slice(0,10) + '.png';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    };
+    watch(exportFmt, (val) => {
+      if (val === 'png') { exportImageData.value = ''; nextTick(generateImage); }
+    });
+    // ===== 确认弹窗 =====
+    const askConfirm = (title, msg, cb) => { confirmTitle.value = title; confirmMsg.value = msg; confirmCb = cb; showConfirm.value = true; };
+    const doConfirm = () => { showConfirm.value = false; if (confirmCb) confirmCb(); confirmCb = null; };
+    const openMapManager = () => { showMenu.value = false; showMapManager.value = true; };
+    const showHelp = () => { showMenu.value = false; showHelpModal.value = true; };
+    // ===== 生命周期 =====
+    const onKeyDown = (e) => {
+      const tag = (e.target && e.target.tagName) || '';
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      if (e.key === 'Tab') { e.preventDefault(); if (selectedId.value) addChild(); }
+      else if (e.key === 'Enter') { e.preventDefault(); if (selectedId.value && !isRootSelected.value) addSibling(); else if (selectedId.value) addChild(); }
+      else if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); if (selectedId.value) deleteNode(); }
+      else if (e.key === 'F2') { e.preventDefault(); if (selectedId.value) openEdit(); }
+      else if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '+')) { e.preventDefault(); view.scale = Math.min(3, view.scale*1.15); }
+      else if ((e.ctrlKey || e.metaKey) && e.key === '-') { e.preventDefault(); view.scale = Math.max(0.15, view.scale/1.15); }
+      else if ((e.ctrlKey || e.metaKey) && e.key === '0') { e.preventDefault(); fitView(); }
+    };
+    onMounted(() => {
+      loadPref();
+      loadMaps();
+      nextTick(() => { fitView(); window.addEventListener('resize', fitView); });
+      window.addEventListener('keydown', onKeyDown);
+    });
+    return {
+      maps, currentMapId, currentMap,
+      selectedId, connectingFrom, activeTag, editing, editText, editInput,
+      editingTag, tagInput, tagInputEl, wrapRef, view, dragNodeId,
+      renamingMap, renameText, renameInput,
+      darkMode, toggleDark,
+      layout, connLines, connNotes, relatedLines, isRelated, connList, canvasStyle, isRootSelected,
+      showMenu, showMapManager, showConnManager, showExport, exportFmt, exportImageData, exportContent,
+      showConfirm, confirmTitle, confirmMsg, showHelpModal, toastMsg,
+      fitView, formatTime,
+      onCanvasTouchStart, onCanvasTouchMove, onCanvasTouchEnd, onCanvasMouseDown, onWheel,
+      onNodeTouchStart, onNodeTouchMove, onNodeTouchEnd, onNodeMouseDown, onNodeClick, openEditFor,
+      addChild, addSibling, deleteNode, openEdit, saveEdit, cancelEdit,
+      openTagEditor, saveTag, cancelTag, toggleTagRelation,
+      startConnect, deleteConnection, updateConnNote, editConnNote, openConnManager,
+      openExport, copyExport, generateImage, downloadImage,
+      switchMap, newMap, deleteMap, startRenameMap, saveRenameMap, cancelRenameMap,
+      newRootInCurrent, confirmClearCurrent, resetNodePosition, openMapManager,
+      askConfirm, doConfirm, showHelp
+    };
+  }
+}).mount('#app');
+</script>
+</body>
+</html>
