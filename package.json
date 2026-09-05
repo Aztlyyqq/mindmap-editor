@@ -1,0 +1,18 @@
+{
+  "name": "mindmap-editor-pc",
+  "version": "1.0.0",
+  "description": "思维导图编辑器 PC版（Electron 桌面应用）",
+  "main": "main.js",
+  "author": "Aztlyyqq",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dist:win": "electron-packager . MindMapEditor --platform=win32 --arch=x64 --out=dist --overwrite --asar --ignore=\"node_modules|package-lock.json\"",
+    "dist:mac": "electron-packager . MindMapEditor --platform=darwin --arch=x64 --out=dist --overwrite --asar",
+    "dist:linux": "electron-packager . MindMapEditor --platform=linux --arch=x64 --out=dist --overwrite --asar"
+  },
+  "devDependencies": {
+    "@electron/packager": "^20.3.0",
+    "electron": "^44.2.0"
+  }
+}
