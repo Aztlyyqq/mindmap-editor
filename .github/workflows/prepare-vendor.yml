@@ -1,0 +1,33 @@
+name: prepare-vendor
+
+# 前端页面依赖 vendor/vue.global.prod.min.js（第三方库不手工入库）。
+# 每次推送到 main 后由 CI 自动获取并在缺失时提交回仓库。
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  vendor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: 获取 Vue 运行库
+        run: node scripts/prepare-vendor.mjs
+      - name: 缺失时提交 vendor
+        run: |
+          if [ -n "$(git status --porcelain vendor)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add vendor
+            git commit -m "chore: 自动补充 Vue 运行库 vendor"
+            git push
+          else
+            echo "vendor 已存在，无需提交"
+          fi

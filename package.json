@@ -6,6 +6,8 @@
   "author": "Aztlyyqq",
   "license": "MIT",
   "scripts": {
+    "postinstall": "node scripts/prepare-vendor.mjs",
+    "prepare:vendor": "node scripts/prepare-vendor.mjs",
     "start": "electron .",
     "dist:win": "electron-packager . MindMapEditor --platform=win32 --arch=x64 --out=dist --overwrite --asar --ignore=\"node_modules|package-lock.json\"",
     "dist:mac": "electron-packager . MindMapEditor --platform=darwin --arch=x64 --out=dist --overwrite --asar",
