@@ -16,6 +16,7 @@ body {
 }
 input, textarea { user-select:text; -webkit-user-select:text; }
 #app { display:flex; flex-direction:column; height:100%; }
+
 /* 导图标签栏 */
 .map-tabs {
   display:flex; align-items:center;
@@ -44,6 +45,7 @@ input, textarea { user-select:text; -webkit-user-select:text; }
   cursor:pointer; color:#666; display:flex; align-items:center; justify-content:center;
 }
 .map-add:hover { background:#e8f5e9; color:#1a7f5a; }
+
 .topbar {
   height:48px; min-height:48px; background:#fff;
   border-bottom:1px solid #e5e6eb;
@@ -60,6 +62,18 @@ input, textarea { user-select:text; -webkit-user-select:text; }
 }
 .icon-btn:hover { background:#e8f5e9; color:#1a7f5a; }
 .icon-btn:active { background:#d0ecd9; }
+/* 选择/平移 模式切换按钮 */
+.mode-switch {
+  height:36px; padding:0 12px; margin-right:4px; border-radius:8px; flex-shrink:0;
+  border:1px solid #d8d8d8; background:#f5f5f5; color:#555; cursor:pointer;
+  display:flex; align-items:center; gap:6px; font-size:13px; font-family:inherit; transition:all .15s;
+}
+.mode-switch:hover { border-color:#1a7f5a; color:#1a7f5a; }
+.mode-switch.on { background:#1a7f5a; border-color:#1a7f5a; color:#fff; font-weight:600; }
+.mode-switch .ms-ico { font-size:15px; }
+body.dark .mode-switch { background:var(--dm-btn); border-color:var(--dm-border); color:var(--dm-text2); }
+body.dark .mode-switch.on { background:#1a7f5a; border-color:#1a7f5a; color:#fff; }
+
 .canvas-wrap {
   flex:1; position:relative; overflow:hidden;
   background-image: radial-gradient(circle, #d9d9d9 1px, transparent 1px);
@@ -68,9 +82,17 @@ input, textarea { user-select:text; -webkit-user-select:text; }
 .canvas { position:absolute; top:0; left:0; transform-origin:0 0; will-change:transform; }
 .lines { position:absolute; top:0; left:0; overflow:visible; pointer-events:none; }
 .lines path { fill:none; stroke-width:2; }
-.lines path.link-conn { stroke-width:2; stroke-dasharray:6 4; }
+.lines path.link-conn { stroke:#ff9800; stroke-width:2; stroke-dasharray:6 4; pointer-events:none; }
+.lines path.link-conn.sel { stroke:#d84315; stroke-width:3.5; stroke-dasharray:none; filter:drop-shadow(0 0 3px rgba(216,67,21,.5)); }
+.lines path.link-hit { stroke:transparent; stroke-width:16; fill:none; pointer-events:stroke; cursor:pointer; }
+.lines path.link-hit:hover { stroke:rgba(255,152,0,.18); }
+.conn-ctrl { fill:#fff; stroke:#d84315; stroke-width:2; cursor:grab; pointer-events:auto; }
+.conn-ctrl:active { cursor:grabbing; }
+.conn-end { fill:#fff; stroke:#ff9800; stroke-width:2; cursor:crosshair; pointer-events:auto; }
+.conn-end.from { stroke:#1e88e5; }
 .lines path.link-related { stroke-width:2.5; stroke-dasharray:5 3; animation:dash 1s linear infinite; }
 @keyframes dash { to { stroke-dashoffset:-16; } }
+
 .node {
   position:absolute; width:150px; min-height:40px; padding:8px 10px;
   border-radius:8px; font-size:13px; line-height:1.35; text-align:center;
@@ -97,6 +119,7 @@ input, textarea { user-select:text; -webkit-user-select:text; }
 .tag-badge:hover { opacity:.8; }
 .tag-badge.active { background:#e65100; animation:pulse 1s infinite; }
 @keyframes pulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.15);} }
+
 .connect-hint {
   position:fixed; top:90px; left:50%; transform:translateX(-50%);
   background:#ff9800; color:#fff; padding:8px 18px; border-radius:20px;
@@ -104,6 +127,7 @@ input, textarea { user-select:text; -webkit-user-select:text; }
   animation:bounce .6s infinite alternate;
 }
 @keyframes bounce { from{transform:translateX(-50%) translateY(0);} to{transform:translateX(-50%) translateY(-4px);} }
+
 .conn-note-label {
   position: absolute; transform: translate(-50%, -50%);
   background: rgba(255,255,255,.94); border: 1px solid #ff9800;
@@ -113,6 +137,7 @@ input, textarea { user-select:text; -webkit-user-select:text; }
   pointer-events: auto; z-index: 5; font-weight: 500;
 }
 .conn-note-label:hover { background:#fff3e0; }
+
 .bottombar {
   background:#fff; border-top:1px solid #e5e6eb;
   padding:8px 12px;
@@ -132,6 +157,7 @@ input, textarea { user-select:text; -webkit-user-select:text; }
 .tool-btn.warn:active { background:#ffe0b2; }
 .tool-btn.danger:active { background:#ffebee; color:#e53935; }
 .tool-btn:disabled { opacity:.35; }
+
 .edit-panel {
   position:fixed; left:50%; top:50%; background:#fff;
   border-radius:12px; padding:20px; width:420px; max-width:92vw;
@@ -153,6 +179,7 @@ input, textarea { user-select:text; -webkit-user-select:text; }
 .edit-panel .ok { background:#1a7f5a; color:#fff; }
 .mask { position:fixed; inset:0; background:rgba(0,0,0,.3); z-index:40; display:none; }
 .mask.show { display:block; }
+
 .modal-mask {
   position:fixed; inset:0; background:rgba(0,0,0,.4);
   display:none; align-items:center; justify-content:center; z-index:60;
@@ -176,6 +203,7 @@ input, textarea { user-select:text; -webkit-user-select:text; }
 .modal-footer button { min-width:110px; height:40px; padding:0 18px; border:none; border-radius:8px; font-size:14px; cursor:pointer; }
 .modal-footer .ghost { background:#f5f5f5; color:#555; }
 .modal-footer .solid { background:#1a7f5a; color:#fff; }
+
 .format-tabs { display:flex; gap:8px; margin-bottom:12px; }
 .format-tabs .tab {
   flex:1; padding:8px 4px; border:1px solid #d9d9d9; background:#fff;
@@ -196,6 +224,7 @@ input, textarea { user-select:text; -webkit-user-select:text; }
 .menu-item .ico { font-size:17px; width:22px; text-align:center; }
 .menu-item .badge { margin-left:auto; background:#ff9800; color:#fff; font-size:11px; padding:2px 8px; border-radius:10px; }
 .confirm-msg { font-size:14px; color:#555; line-height:1.8; padding:8px 0; }
+
 .conn-item {
   background:#f9f9f9; border-radius:8px; padding:10px 12px; margin-bottom:8px;
 }
@@ -208,6 +237,7 @@ input, textarea { user-select:text; -webkit-user-select:text; }
   padding:0 10px; font-size:12px; outline:none; margin-top:8px;
 }
 .conn-note-input:focus { border-color:#ff9800; }
+
 /* 导图管理列表 */
 .map-manage-item {
   display:flex; align-items:center; gap:10px;
@@ -222,6 +252,7 @@ input, textarea { user-select:text; -webkit-user-select:text; }
 .map-manage-item .btn-edit { background:#e3f2fd; color:#1565c0; }
 .map-manage-item .btn-del { background:#ffebee; color:#e53935; }
 .map-manage-item.current { border:2px solid #1a7f5a; background:#e8f5e9; }
+
 .empty-tip { text-align:center; color:#bbb; font-size:13px; padding:30px 0; }
 .toast {
   position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
@@ -229,6 +260,7 @@ input, textarea { user-select:text; -webkit-user-select:text; }
   font-size:14px; z-index:200; opacity:0; pointer-events:none; transition:opacity .2s;
 }
 .toast.show { opacity:1; }
+
 /* ===== 夜间模式 ===== */
 :root {
   --dm-bg:#12121f; --dm-panel:#1a1a2e; --dm-panel2:#1e1e35;
@@ -292,6 +324,90 @@ body.dark .conn-note-label { background:rgba(30,30,53,.95); border-color:#ffb74d
 body.dark .connect-hint { background:#e65100; }
 body.dark .node.selected { box-shadow:0 0 0 3px rgba(100,181,246,.5),0 2px 8px rgba(0,0,0,.4); }
 body.dark .node.related { box-shadow:0 0 0 3px rgba(255,183,77,.7),0 0 14px rgba(255,152,0,.5); }
+
+/* ===== 多选 ===== */
+.node.multi-selected { box-shadow:0 0 0 3px rgba(76,175,80,.6), 0 2px 10px rgba(0,0,0,.18); }
+.node.in-marquee { box-shadow:0 0 0 3px rgba(76,175,80,.45); }
+body.dark .node.multi-selected { box-shadow:0 0 0 3px rgba(102,187,106,.7),0 2px 10px rgba(0,0,0,.5); }
+/* 框选矩形（屏幕坐标，覆盖在画布容器内） */
+.marquee {
+  position:absolute; z-index:20; pointer-events:none;
+  border:1px solid #1976d2; background:rgba(25,118,210,.10);
+  border-radius:2px;
+}
+body.dark .marquee { border-color:#64b5f6; background:rgba(100,181,246,.14); }
+/* 平移抓手 */
+.canvas-wrap.space-pan, .canvas-wrap.tool-pan { cursor:grab; }
+.canvas-wrap.panning { cursor:grabbing; }
+/* 右键菜单 */
+.ctx-menu {
+  position:fixed; z-index:300; min-width:208px;
+  background:#fff; border-radius:10px; padding:6px;
+  box-shadow:0 8px 28px rgba(0,0,0,.18);
+  font-size:13px; user-select:none; animation:ctxIn .1s ease;
+  border:1px solid #eee;
+}
+@keyframes ctxIn { from{opacity:0;transform:translateY(-4px);} to{opacity:1;transform:translateY(0);} }
+.ctx-item {
+  display:flex; align-items:center; gap:10px;
+  padding:8px 10px; border-radius:6px; cursor:pointer; color:#333; white-space:nowrap;
+}
+.ctx-item:hover { background:#e8f5e9; color:#1a7f5a; }
+.ctx-item.danger:hover { background:#ffebee; color:#e53935; }
+.ctx-item .ci-ico { width:18px; text-align:center; }
+.ctx-item .ci-label { flex:1; }
+.ctx-item .kbd2 {
+  font-size:11px; color:#999; background:#f2f2f2; border:1px solid #e0e0e0;
+  border-radius:4px; padding:0 5px; line-height:16px;
+}
+.ctx-item:hover .kbd2 { background:#fff; }
+.ctx-sep { height:1px; background:#eee; margin:4px 6px; }
+.ctx-color-title { font-size:11px; color:#999; padding:4px 10px 2px; }
+.ctx-color-row { display:flex; gap:7px; align-items:center; padding:2px 10px 6px; }
+.ctx-dot {
+  width:20px; height:20px; border-radius:50%; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  font-size:11px; color:#fff; border:2px solid transparent;
+  box-shadow:0 0 0 1px rgba(0,0,0,.08) inset; transition:transform .08s;
+}
+.ctx-dot:hover { transform:scale(1.18); }
+.ctx-dot.on { border-color:#333; box-shadow:0 0 0 2px rgba(0,0,0,.15); }
+.ctx-dot.auto { background:#bbb; color:#fff; }
+/* 快捷键设置面板 */
+.sc-tip { font-size:12px; color:#888; line-height:1.6; background:#f6f8fa; border-radius:8px; padding:8px 10px; margin-bottom:10px; }
+.sc-list { max-height:46vh; overflow-y:auto; border:1px solid #eee; border-radius:8px; padding:4px; }
+.sc-row { display:flex; align-items:center; gap:10px; padding:6px 8px; border-bottom:1px solid #f2f2f2; }
+.sc-row:last-child { border-bottom:none; }
+.sc-label { flex:1; font-size:13px; color:#333; }
+.sc-key {
+  min-width:130px; text-align:center; font-size:12px; padding:5px 10px; border-radius:6px;
+  border:1px solid #d0d4dc; background:#fafbfc; color:#1a7f5a; cursor:pointer; font-family:inherit;
+}
+.sc-key:hover { border-color:#1a7f5a; }
+.sc-key.rec { border-color:#1976d2; color:#1976d2; background:#e3f2fd; animation:recBlink 1s infinite; }
+.sc-key.conflict { border-color:#e53935; color:#e53935; background:#ffebee; animation:none; }
+@keyframes recBlink { 50% { opacity:.55; } }
+.sc-clear { width:24px; height:24px; border-radius:50%; border:none; background:#f0f0f0; color:#999; cursor:pointer; font-size:14px; line-height:1; }
+.sc-clear:hover { background:#ffebee; color:#e53935; }
+.sc-conflict { margin:8px; padding:8px 10px; font-size:12px; color:#b71c1c; background:#ffebee; border-radius:6px; }
+body.dark .sc-tip { background:#252540; color:#aaa; }
+body.dark .sc-list { border-color:#2d2d4a; }
+body.dark .sc-row { border-color:#262640; }
+body.dark .sc-label { color:#e0e0e0; }
+body.dark .sc-key { background:#252540; border-color:#3a3a55; color:#66bb6a; }
+.ctx-head { font-size:11px; color:#999; padding:4px 10px 6px; max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+body.dark .ctx-menu { background:#1e1e35; border-color:#2d2d4a; }
+body.dark .ctx-item { color:#e0e0e0; }
+body.dark .ctx-item:hover { background:rgba(76,175,80,.18); color:#66bb6a; }
+body.dark .ctx-item.danger:hover { background:rgba(229,57,53,.18); color:#ef5350; }
+body.dark .ctx-item .kbd2 { background:#252540; border-color:#2d2d4a; color:#888; }
+body.dark .ctx-sep { background:#2d2d4a; }
+body.dark .ctx-dot.on { border-color:#fff; }
+body.dark .ctx-head { color:#888; }
+/* 按钮上的快捷键角标 */
+.tool-btn .kbd { font-size:9px; opacity:.65; margin-left:2px; }
+.kbd-tip { font-size:10px; color:#aaa; }
+
 </style>
 </head>
 <body>
@@ -302,40 +418,65 @@ body.dark .node.related { box-shadow:0 0 0 3px rgba(255,183,77,.7),0 0 14px rgba
             @click="switchMap(m.id)">
       <span>{{ m.name }}</span>
     </button>
-    <button class="map-add" @click="newMap()" title="新建导图">＋</button>
+    <button class="map-add" @click="newMap()" title="新建导图（Ctrl+N）">＋</button>
   </div>
+
   <!-- 顶部栏 -->
   <div class="topbar">
     <span class="title">{{ currentMap ? currentMap.name : '' }}</span>
-    <button class="icon-btn" @click="newRootInCurrent" title="在当前画布新建导图">🌱</button>
-    <button class="icon-btn" @click="openMapManager" title="导图管理">📁</button>
-    <button class="icon-btn" @click="toggleDark" :title="darkMode?'切换日间模式':'切换夜间模式'">{{ darkMode ? '☀️' : '🌙' }}</button>
-    <button class="icon-btn" @click="fitView" title="适应窗口">⛶</button>
+    <button class="mode-switch" :class="{on:toolMode==='pan'}" @click="toggleToolMode"
+            :title="toolMode==='pan' ? '当前：平移模式（左键拖动画布），点击切回选择模式（H）' : '当前：选择模式（左键空白框选节点），点击切为平移模式（H）'">
+      <span class="ms-ico">{{ toolMode === 'pan' ? '✋' : '↖' }}</span>
+      <span class="ms-txt">{{ toolMode === 'pan' ? '平移' : '选择' }}</span>
+    </button>
+    <button class="icon-btn" @click="newRootInCurrent" title="在当前画布新建导图（Alt+N）">🌱</button>
+    <button class="icon-btn" @click="openMapManager" title="导图管理（Ctrl+M）">📁</button>
+    <button class="icon-btn" @click="toggleDark" :title="darkMode?'切换日间模式（D）':'切换夜间模式（D）'">{{ darkMode ? '☀️' : '🌙' }}</button>
+    <button class="icon-btn" @click="fitView" title="适应窗口（F / Ctrl+0）">⛶</button>
     <span class="zoom">{{ Math.round(view.scale*100) }}%</span>
   </div>
+
   <div class="connect-hint" v-if="connectingFrom !== null">🔗 连接模式：点击目标节点建立连接，点空白取消</div>
+
   <!-- 画布 -->
   <div class="canvas-wrap" ref="wrapRef"
+       :class="{'space-pan':spaceDown && !isPanning, 'tool-pan':toolMode==='pan' && !isPanning, 'panning':isPanning}"
        @touchstart="onCanvasTouchStart"
        @touchmove="onCanvasTouchMove"
        @touchend="onCanvasTouchEnd"
        @mousedown="onCanvasMouseDown"
+       @contextmenu.prevent="onCanvasContextMenu"
        @wheel.prevent="onWheel">
     <div class="canvas" :style="canvasStyle">
       <svg class="lines" :width="layout.width" :height="layout.height" xmlns="http://www.w3.org/2000/svg">
         <path v-for="link in layout.links" :key="'l'+link.id" :d="link.d" :stroke="link.color" stroke-opacity="0.5" />
-        <path v-for="c in connLines" :key="'c'+c.id" class="link-conn" :d="c.d" stroke="#ff9800" stroke-opacity="0.7" />
+        <path v-for="c in connLines" :key="'c'+c.id" class="link-conn" :class="{sel: selectedConnId===c.id}" :d="c.d" />
+        <!-- 加宽透明热区，便于点中并拖拽连接线 -->
+        <path v-for="c in connLines" :key="'h'+c.id" class="link-hit" :d="c.d"
+              @mousedown.stop="onConnMouseDown(c, $event)" @dblclick.stop="resetConnCtrl(c.id)" />
         <path v-for="r in relatedLines" :key="'r'+r.id" class="link-related" :d="r.d" stroke="#ff5722" stroke-opacity="0.8" />
+        <!-- 选中连接线后的控制手柄 -->
+        <template v-for="c in connLines" :key="'g'+c.id">
+        <g v-if="selectedConnId===c.id" class="conn-handles">
+          <circle :cx="c.cpx" :cy="c.cpy" r="7" class="conn-ctrl"
+                  @mousedown.stop="onCtrlHandleDown(c.id, $event)" />
+          <circle :cx="c.ahx" :cy="c.ahy" r="6" class="conn-end from"
+                  @mousedown.stop="onEndHandleDown(c.id, 'from', $event)" />
+          <circle :cx="c.bhx" :cy="c.bhy" r="6" class="conn-end to"
+                  @mousedown.stop="onEndHandleDown(c.id, 'to', $event)" />
+        </g>
+        </template>
       </svg>
       <div v-for="n in layout.nodes" :key="'n'+n.id"
-           class="node" :class="{root:n.isRoot, selected:n.id===selectedId, related:isRelated(n.id), dimmed: activeTag && !isRelated(n.id) && n.id!==selectedId, dragging:dragNodeId===n.id}"
+           class="node" :class="{root:n.isRoot, selected:n.id===selectedId, 'multi-selected':isMultiSelected(n.id), 'in-marquee':isInMarquee(n.id), related:isRelated(n.id), dimmed: activeTag && !isRelated(n.id) && n.id!==selectedId, dragging:dragNodeId===n.id||isGroupDragging(n.id)}"
            :style="{left:n.x+'px', top:n.y+'px', background:n.bg, borderColor:n.border, color:n.textColor}"
            @touchstart.stop="onNodeTouchStart(n, $event)"
            @touchmove.stop="onNodeTouchMove($event)"
            @touchend.stop="onNodeTouchEnd(n, $event)"
            @mousedown.stop="onNodeMouseDown(n, $event)"
-           @click.stop="onNodeClick(n)"
-           @dblclick.stop="openEditFor(n)">
+           @click.stop="onNodeClick(n, $event)"
+           @dblclick.stop="openEditFor(n)"
+           @contextmenu.stop.prevent="onNodeContextMenu(n, $event)">
         <div class="node-tags" v-if="n.tags && n.tags.length">
           <span v-for="t in n.tags.slice(0,2)" :key="t" class="tag-badge" :class="{active:t===activeTag}"
                 @click.stop="toggleTagRelation(t)">{{ t }}</span>
@@ -348,16 +489,21 @@ body.dark .node.related { box-shadow:0 0 0 3px rgba(255,183,77,.7),0 0 14px rgba
         📝 {{ note.text }}
       </div>
     </div>
+    <!-- 左键框选矩形（屏幕坐标，相对画布容器） -->
+    <div v-if="marquee.show" class="marquee"
+         :style="{left:marquee.x+'px', top:marquee.y+'px', width:marquee.w+'px', height:marquee.h+'px'}"></div>
   </div>
+
   <!-- 底部工具栏 -->
   <div class="bottombar">
-    <button class="tool-btn primary" :disabled="!selectedId" @click="addChild"><span class="ico">＋</span>子节点</button>
-    <button class="tool-btn" :disabled="!selectedId || isRootSelected" @click="addSibling"><span class="ico">↳</span>同级</button>
-    <button class="tool-btn danger" :disabled="!selectedId" @click="deleteNode"><span class="ico">✕</span>删除</button>
-    <button class="tool-btn warn" :disabled="!selectedId" @click="openTagEditor"><span class="ico">🏷</span>标签</button>
-    <button class="tool-btn warn" :disabled="!selectedId" @click="startConnect"><span class="ico">🔗</span>连接</button>
-    <button class="tool-btn" @click="showMenu=true"><span class="ico">⋯</span>更多</button>
+    <button class="tool-btn primary" :disabled="!selectedId" title="添加子节点（Tab / Insert）" @click="addChild"><span class="ico">＋</span>子节点<span class="kbd">Tab</span></button>
+    <button class="tool-btn" :disabled="!selectedId || isRootSelected" title="添加同级节点（Enter）" @click="addSibling"><span class="ico">↳</span>同级<span class="kbd">Enter</span></button>
+    <button class="tool-btn danger" :disabled="!selectedId" title="删除选中节点（Delete）" @click="deleteNode"><span class="ico">✕</span>删除<span class="kbd">Del</span></button>
+    <button class="tool-btn warn" :disabled="!selectedId" title="编辑标签（T）" @click="openTagEditor"><span class="ico">🏷</span>标签<span class="kbd">T</span></button>
+    <button class="tool-btn warn" :disabled="!selectedId" title="连接到另一节点（L）" @click="startConnect"><span class="ico">🔗</span>连接<span class="kbd">L</span></button>
+    <button class="tool-btn" title="更多操作（M）" @click="openMoreMenu"><span class="ico">⋯</span>更多<span class="kbd">M</span></button>
   </div>
+
   <!-- 编辑文字 -->
   <div class="mask" :class="{show:editing}" @click="cancelEdit"></div>
   <div class="edit-panel" :class="{show:editing}">
@@ -368,6 +514,7 @@ body.dark .node.related { box-shadow:0 0 0 3px rgba(255,183,77,.7),0 0 14px rgba
       <button class="ok" @click="saveEdit">完成</button>
     </div>
   </div>
+
   <!-- 编辑标签 -->
   <div class="mask" :class="{show:editingTag}" @click="cancelTag"></div>
   <div class="edit-panel" :class="{show:editingTag}">
@@ -379,6 +526,7 @@ body.dark .node.related { box-shadow:0 0 0 3px rgba(255,183,77,.7),0 0 14px rgba
       <button class="ok" @click="saveTag">保存</button>
     </div>
   </div>
+
   <!-- 更多菜单 -->
   <div class="modal-mask" :class="{show:showMenu}" @click.self="showMenu=false">
     <div class="modal">
@@ -391,11 +539,13 @@ body.dark .node.related { box-shadow:0 0 0 3px rgba(255,183,77,.7),0 0 14px rgba
           <div class="menu-item" @click="openExport"><span class="ico">📤</span>导出（Markdown / Mermaid / 图片）</div>
           <div class="menu-item" @click="openMapManager"><span class="ico">📁</span>导图管理（{{ maps.length }}个）</div>
           <div class="menu-item" @click="confirmClearCurrent"><span class="ico">🗑</span>清空当前画布</div>
+          <div class="menu-item" @click="openShortcuts"><span class="ico">⌨️</span>快捷键设置（自定义绑定）</div>
           <div class="menu-item" @click="showHelp"><span class="ico">❓</span>使用帮助</div>
         </div>
       </div>
     </div>
   </div>
+
   <!-- 导图管理 -->
   <div class="modal-mask" :class="{show:showMapManager}" @click.self="showMapManager=false">
     <div class="modal">
@@ -418,6 +568,7 @@ body.dark .node.related { box-shadow:0 0 0 3px rgba(255,183,77,.7),0 0 14px rgba
       <div class="modal-footer"><button class="solid" @click="showMapManager=false">完成</button></div>
     </div>
   </div>
+
   <!-- 重命名导图 -->
   <div class="mask" :class="{show:renamingMap}" @click="cancelRenameMap"></div>
   <div class="edit-panel" :class="{show:renamingMap}">
@@ -428,6 +579,7 @@ body.dark .node.related { box-shadow:0 0 0 3px rgba(255,183,77,.7),0 0 14px rgba
       <button class="ok" @click="saveRenameMap">保存</button>
     </div>
   </div>
+
   <!-- 管理连接 -->
   <div class="modal-mask" :class="{show:showConnManager}" @click.self="showConnManager=false">
     <div class="modal">
@@ -447,6 +599,7 @@ body.dark .node.related { box-shadow:0 0 0 3px rgba(255,183,77,.7),0 0 14px rgba
       <div class="modal-footer"><button class="solid" @click="showConnManager=false">完成</button></div>
     </div>
   </div>
+
   <!-- 导出 -->
   <div class="modal-mask" :class="{show:showExport}" @click.self="showExport=false">
     <div class="modal">
@@ -470,6 +623,7 @@ body.dark .node.related { box-shadow:0 0 0 3px rgba(255,183,77,.7),0 0 14px rgba
       </div>
     </div>
   </div>
+
   <!-- 确认 -->
   <div class="modal-mask" :class="{show:showConfirm}" @click.self="showConfirm=false">
     <div class="modal" style="max-width:400px;">
@@ -481,6 +635,33 @@ body.dark .node.related { box-shadow:0 0 0 3px rgba(255,183,77,.7),0 0 14px rgba
       </div>
     </div>
   </div>
+
+  <!-- 快捷键设置 -->
+  <div class="modal-mask" :class="{show:showShortcuts}" @click.self="showShortcuts=false">
+    <div class="modal" style="max-width:560px;">
+      <div class="modal-header"><span>快捷键设置</span><button class="close" @click="showShortcuts=false">×</button></div>
+      <div class="modal-body">
+        <div class="sc-tip">点击右侧按键后按下新键位即可绑定；同一按键被占用时会提示冲突。固定项（空格平移、滚轮缩放、Ctrl±、方向键、Esc）不可更改。</div>
+        <div class="sc-list">
+          <div v-for="a in SHORTCUT_ACTIONS" :key="a.id" class="sc-row">
+            <span class="sc-label">{{ a.label }}</span>
+            <button class="sc-key" :class="{rec:recordingAction===a.id, conflict:recordingAction===a.id && recordConflict}"
+                    @click="startRecord(a.id)">
+              <template v-if="recordingAction===a.id">{{ recordConflict ? '冲突，点此重试' : '请按下按键…（Esc取消）' }}</template>
+              <template v-else>{{ comboLabel(keymap[a.id]) }}</template>
+            </button>
+            <button class="sc-clear" title="清空绑定" @click="clearBinding(a.id)">×</button>
+          </div>
+          <div v-if="recordConflict" class="sc-conflict">{{ recordConflict }}</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="ghost" @click="resetKeymap">恢复默认</button>
+        <button class="solid" @click="showShortcuts=false">完成</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 帮助 -->
   <div class="modal-mask" :class="{show:showHelpModal}" @click.self="showHelpModal=false">
     <div class="modal">
@@ -489,25 +670,66 @@ body.dark .node.related { box-shadow:0 0 0 3px rgba(255,183,77,.7),0 0 14px rgba
         <div class="confirm-msg">
           <p><strong>📁 多导图：</strong>顶部标签栏切换不同导图，点「＋」新建；「📁」管理（重命名/删除）</p>
           <p><strong>🌱 单画布多导图：</strong>点顶部「🌱」在当前画布添加新的根节点，多个导图可同屏显示</p>
-          <p><strong>✋ 拖动节点：</strong>鼠标按住任意节点拖动，整个子树跟随移动；「更多→重置节点位置」恢复自动布局</p>
-          <p><strong>📌 选中节点：</strong>单击节点</p>
-          <p><strong>✏️ 编辑文字：</strong>双击节点，或按 F2 / 更多→编辑节点文字</p>
-          <p><strong>⌨️ 快捷键：</strong>Tab 加子节点、Enter 加同级、Delete 删除、Ctrl+滚轮/± 缩放、Ctrl+0 适应窗口</p>
-          <p><strong>🏷 标签：</strong>选中后点「标签」，点击节点上方标签可联想高亮同标签节点</p>
-          <p><strong>🔗 连接：</strong>选中后点「连接」再点另一节点；更多→管理连接可写批注、删除</p>
-          <p><strong>✋ 移动画布：</strong>鼠标拖拽空白区域（不要按在节点上）</p>
-          <p><strong>🔍 缩放：</strong>鼠标滚轮，或点顶部「⛶」</p>
+          <p><strong>✋ 拖动节点：</strong>鼠标按住任意节点拖动，整个子树跟随移动；「更多→重置节点位置」恢复自动布局；方向键可微调位置（Shift+方向键大步）</p>
+          <p><strong>📌 选中节点：</strong>单击节点；<strong>按住左键在空白处拖出方框</strong>可框选多个节点；Shift+单击可增减选中；Ctrl+A 全选。多选后可一起拖动、删除</p>
+          <p><strong>🖱 右键菜单：</strong>在节点上点右键弹出编辑/加子级/标签/连接/删除等操作；在空白处右键弹出全选/适应窗口/夜间模式/导出等</p>
+          <p><strong>✏️ 编辑文字：</strong>双击节点，或按 F2 / 右键→编辑文字</p>
+          <p><strong>⌨️ 快捷键：</strong>默认 Tab 加子节点、Enter 同级、Delete 删除、F2 编辑、T 标签、L 连接、R 重置、F 适应窗口、D 夜间、M 更多、Alt+N 新分支、Ctrl+N/M/E/A 新导图/管理/导出/全选、Esc 取消；可在「更多→快捷键设置」里自行改键，冲突会提醒</p>
+          <p><strong>🎨 节点上色：</strong>右键节点 → 节点颜色，提供 7 种颜色，可对多选节点批量上色，↺ 恢复自动配色</p>
+          <p><strong>🔗 连接：</strong>选中后点「连接」（或按 L）再点另一节点；点一下连接线即可选中，按住拖动可自由改变走线，拖两端圆点可重新接到别的节点，双击连接线复位；更多→管理连接可写批注、删除，选中连接线后按 Delete 删除</p>
+          <p><strong>🏷 标签：</strong>选中后点「标签」（或按 T），点击节点上方标签可联想高亮同标签节点</p>
+          <p><strong>🔀 选择/平移切换：</strong>点顶部「选择/平移」按钮（或按 H）切换左键模式：选择模式下左键空白拖动为框选节点；平移模式下左键直接拖动画布</p>
+          <p><strong>✋ 移动画布：</strong>平移模式下左键拖动，或按住<strong>空格</strong>、按<strong>鼠标中键</strong>拖动</p>
+          <p><strong>🔍 缩放：</strong>鼠标滚轮（以光标为中心），或 Ctrl+加号/减号、Ctrl+0 适应窗口</p>
           <p><strong>💾 自动保存：</strong>所有导图自动存到本机浏览器</p>
         </div>
       </div>
       <div class="modal-footer"><button class="solid" @click="showHelpModal=false">知道了</button></div>
     </div>
   </div>
+
+  <!-- 右键上下文菜单 -->
+  <div class="ctx-menu" v-if="ctxMenu.show"
+       :style="{left:ctxMenu.x+'px', top:ctxMenu.y+'px'}"
+       @mousedown.stop @click.stop>
+    <template v-if="ctxMenu.type==='node'">
+      <div class="ctx-head">{{ ctxMenu.nodeText }}</div>
+      <div class="ctx-item" @click="ctxEdit"><span class="ci-ico">✎</span><span class="ci-label">编辑文字</span><span class="kbd2">F2</span></div>
+      <div class="ctx-item" @click="ctxAddChild"><span class="ci-ico">＋</span><span class="ci-label">添加子节点</span><span class="kbd2">Tab</span></div>
+      <div class="ctx-item" @click="ctxAddSibling"><span class="ci-ico">↳</span><span class="ci-label">添加同级</span><span class="kbd2">Enter</span></div>
+      <div class="ctx-item" @click="ctxTag"><span class="ci-ico">🏷</span><span class="ci-label">编辑标签</span><span class="kbd2">T</span></div>
+      <div class="ctx-item" @click="ctxConnect"><span class="ci-ico">🔗</span><span class="ci-label">从此连接</span><span class="kbd2">L</span></div>
+      <div class="ctx-item" @click="ctxReset"><span class="ci-ico">⟲</span><span class="ci-label">重置位置</span><span class="kbd2">R</span></div>
+      <div class="ctx-sep"></div>
+      <div class="ctx-color-title">节点颜色（{{ NODE_PALETTE.length }} 色）</div>
+      <div class="ctx-color-row">
+        <span v-for="(c, i) in NODE_PALETTE" :key="i" class="ctx-dot"
+              :class="{on: selectedColor===i}"
+              :style="{background:c.dot}" :title="c.name" @click="ctxPaint(i)"></span>
+        <span class="ctx-dot auto" :class="{on: selectedColor===-1}" title="恢复自动配色" @click="ctxPaint(null)">↺</span>
+      </div>
+      <div class="ctx-sep"></div>
+      <div class="ctx-item danger" @click="ctxDelete"><span class="ci-ico">✕</span><span class="ci-label">删除节点</span><span class="kbd2">Del</span></div>
+    </template>
+    <template v-else>
+      <div class="ctx-item" @click="ctxSelectAll"><span class="ci-ico">▣</span><span class="ci-label">全选节点</span><span class="kbd2">Ctrl+A</span></div>
+      <div class="ctx-item" @click="ctxNewRoot"><span class="ci-ico">🌱</span><span class="ci-label">新建导图分支</span><span class="kbd2">Alt+N</span></div>
+      <div class="ctx-item" @click="ctxFit"><span class="ci-ico">⛶</span><span class="ci-label">适应窗口</span><span class="kbd2">F</span></div>
+      <div class="ctx-item" @click="ctxDark"><span class="ci-ico">{{ darkMode?'☀️':'🌙' }}</span><span class="ci-label">{{ darkMode?'日间模式':'夜间模式' }}</span><span class="kbd2">D</span></div>
+      <div class="ctx-sep"></div>
+      <div class="ctx-item" @click="ctxExport"><span class="ci-ico">📤</span><span class="ci-label">导出</span><span class="kbd2">Ctrl+E</span></div>
+      <div class="ctx-item" @click="ctxManager"><span class="ci-ico">📁</span><span class="ci-label">导图管理</span><span class="kbd2">Ctrl+M</span></div>
+      <div class="ctx-item" @click="openShortcuts"><span class="ci-ico">⌨️</span><span class="ci-label">快捷键设置</span></div>
+    </template>
+  </div>
+
   <div class="toast" :class="{show:toastMsg}">{{ toastMsg }}</div>
 </div>
+
 <script src="vendor/vue.global.prod.min.js"></script>
 <script>
 const { createApp, ref, reactive, computed, onMounted, nextTick, watch } = Vue;
+
 createApp({
   setup() {
     const NW = 150, NH = 40, ROOT_H = 46, VGAP = 60, HGAP = 20, ROOT_GAP = 100;
@@ -522,11 +744,23 @@ createApp({
       {bg:'#fff9c4', border:'#fdd835', text:'#f57f17'},
       {bg:'#efebe9', border:'#6d4c41', text:'#3e2723'}
     ];
+    // 用户自由上色调色板（至多 7 色）
+    const NODE_PALETTE = [
+      { name:'红', bg:'#ffebee', border:'#e53935', text:'#b71c1c', dot:'#e53935' },
+      { name:'橙', bg:'#fff3e0', border:'#fb8c00', text:'#e65100', dot:'#fb8c00' },
+      { name:'黄', bg:'#fffde7', border:'#f9a825', text:'#f57f17', dot:'#f9a825' },
+      { name:'绿', bg:'#e8f5e9', border:'#43a047', text:'#1b5e20', dot:'#43a047' },
+      { name:'青', bg:'#e0f7fa', border:'#00acc1', text:'#006064', dot:'#00acc1' },
+      { name:'蓝', bg:'#e3f2fd', border:'#1e88e5', text:'#0d47a1', dot:'#1e88e5' },
+      { name:'紫', bg:'#f3e5f5', border:'#8e24aa', text:'#4a148c', dot:'#8e24aa' }
+    ];
+
     let nextId = 1;
     let connId = 1;
     let mapId = 1;
     const makeNode = (text, children, tags) => ({ id: nextId++, text, children: children || [], tags: tags || [], offsetX: 0, offsetY: 0 });
     const makeMap = (name, roots) => ({ id: 'map_' + (mapId++), name: name || '未命名导图', roots: roots || [], connections: [], createdAt: Date.now(), updatedAt: Date.now() });
+
     const templateRoots = () => [
       makeNode('复盘', [
         makeNode('回顾目标', [makeNode('当初目标是什么'), makeNode('目标如何制定'), makeNode('期望与实际对比')]),
@@ -536,6 +770,7 @@ createApp({
         makeNode('行动计划', [makeNode('继续做'), makeNode('停止做'), makeNode('开始做'), makeNode('待跟进')])
       ])
     ];
+
     const normalizeNode = (n) => {
       if (!n.children) n.children = [];
       if (!n.tags) n.tags = [];
@@ -547,10 +782,12 @@ createApp({
       walk(n);
       if (maxId >= nextId) nextId = maxId + 1;
     };
+
     // ===== 多导图存储 =====
     const maps = ref([]);
     const currentMapId = ref(null);
     const currentMap = computed(() => maps.value.find(m => m.id === currentMapId.value) || maps.value[0] || null);
+
     const loadMaps = () => {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
@@ -575,18 +812,20 @@ createApp({
       maps.value = [m];
       currentMapId.value = m.id;
     };
+
     const saveMaps = () => {
       try {
         if (currentMap.value) currentMap.value.updatedAt = Date.now();
         localStorage.setItem(STORAGE_KEY, JSON.stringify({ maps: maps.value, currentMapId: currentMapId.value }));
       } catch(e) {}
     };
-    const switchMap = (id) => { currentMapId.value = id; selectedId.value = null; connectingFrom.value = null; activeTag.value = null; nextTick(fitView); };
+
+    const switchMap = (id) => { currentMapId.value = id; clearSelection(); connectingFrom.value = null; nextTick(fitView); };
     const newMap = () => {
       const m = makeMap('导图 ' + (maps.value.length + 1), [makeNode('中心主题')]);
       maps.value.push(m);
       currentMapId.value = m.id;
-      selectedId.value = null;
+      selectedIds.value = []; selectedId.value = null;
       saveMaps();
       showMapManager.value = false;
       nextTick(fitView);
@@ -618,13 +857,15 @@ createApp({
       if (m && renameText.value.trim()) { m.name = renameText.value.trim(); saveMaps(); }
       renamingMap.value = false;
       renamingMapId = null;
+      if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
     };
-    const cancelRenameMap = () => { renamingMap.value = false; renamingMapId = null; };
+    const cancelRenameMap = () => { renamingMap.value = false; renamingMapId = null; if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); };
     const formatTime = (ts) => {
       if (!ts) return '';
       const d = new Date(ts);
       return (d.getMonth()+1) + '/' + d.getDate() + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
     };
+
     // 在当前画布新建根节点
     const newRootInCurrent = () => {
       if (!currentMap.value) return;
@@ -635,6 +876,7 @@ createApp({
       nextTick(fitView);
       toast('已在当前画布添加新导图');
     };
+
     // 清空当前画布
     const confirmClearCurrent = () => {
       showMenu.value = false;
@@ -643,14 +885,16 @@ createApp({
           currentMap.value.roots = [makeNode('中心主题')];
           currentMap.value.connections = [];
         }
-        selectedId.value = null;
+        selectedIds.value = []; selectedId.value = null;
         saveMaps();
         nextTick(fitView);
       });
     };
+
     // ===== 通用状态 =====
     const selectedId = ref(null);
     const connectingFrom = ref(null);
+    const selectedConnId = ref(null);   // 当前选中、可自由拖拽的连接线
     const activeTag = ref(null);
     const editing = ref(false);
     const editText = ref('');
@@ -662,6 +906,36 @@ createApp({
     const view = reactive({ tx: 0, ty: 0, scale: 1 });
     const dragNodeId = ref(null);
     let dragState = null;
+
+    // ===== 多选 / 框选 / 右键菜单 / 空格平移 =====
+    const selectedIds = ref([]);                 // 当前选中的全部节点 id（含主选中）
+    const isMultiSelected = (id) => selectedIds.value.indexOf(id) >= 0;
+    const marquee = reactive({ show:false, x:0, y:0, w:0, h:0 });
+    const marqueeHitIds = ref([]);               // 框选过程中实时命中的节点
+    const isInMarquee = (id) => marqueeHitIds.value.indexOf(id) >= 0;
+    const ctxMenu = reactive({ show:false, x:0, y:0, type:'canvas', nodeId:null, nodeText:'' });
+    const spaceDown = ref(false);
+    const isPanning = ref(false);
+    // 左键工具模式：'select'=空白框选节点（默认）；'pan'=左键直接拖动画布
+    const toolMode = ref('select');
+    const toggleToolMode = () => {
+      toolMode.value = toolMode.value === 'pan' ? 'select' : 'pan';
+      savePref();
+      toast(toolMode.value === 'pan' ? '平移模式：左键拖动画布' : '选择模式：左键空白框选节点');
+    };
+    // 屏幕坐标 -> 画布坐标（统一换算，修复缩放/平移后鼠标与节点错位）
+    const clientToCanvas = (clientX, clientY) => {
+      const wrap = wrapRef.value;
+      if (!wrap) return { x:0, y:0 };
+      const rect = wrap.getBoundingClientRect();
+      return {
+        x: (clientX - rect.left - view.tx) / view.scale,
+        y: (clientY - rect.top  - view.ty) / view.scale
+      };
+    };
+    const setSingleSelection = (id) => { selectedId.value = id; selectedIds.value = id ? [id] : []; };
+    const clearSelection = () => { selectedId.value = null; selectedIds.value = []; activeTag.value = null; };
+
     const showMenu = ref(false);
     const showMapManager = ref(false);
     const showConnManager = ref(false);
@@ -676,8 +950,82 @@ createApp({
     const toastMsg = ref('');
     let toastTimer = null;
     const toast = (msg) => { toastMsg.value = msg; clearTimeout(toastTimer); toastTimer = setTimeout(() => toastMsg.value = '', 1500); };
-    // ===== 夜间模式 =====
+
+    // ===== 夜间模式 / 可自定义快捷键 =====
     const PREF_KEY = 'mindmap_pc_pref_v1';
+    // 可绑定的命令动作（id、中文名、默认按键）
+    const SHORTCUT_ACTIONS = [
+      { id:'addChild',    label:'添加子节点', def:'tab' },
+      { id:'addSibling',  label:'添加同级节点', def:'enter' },
+      { id:'deleteNode',  label:'删除选中', def:'delete' },
+      { id:'openEdit',    label:'编辑节点文字', def:'f2' },
+      { id:'tag',         label:'编辑标签', def:'t' },
+      { id:'connect',     label:'开始连接', def:'l' },
+      { id:'resetPos',    label:'重置节点位置', def:'r' },
+      { id:'fit',         label:'适应窗口', def:'f' },
+      { id:'dark',        label:'切换夜间模式', def:'d' },
+      { id:'more',        label:'更多菜单', def:'m' },
+      { id:'selectAll',   label:'全选节点', def:'ctrl+a' },
+      { id:'newMap',      label:'新建导图', def:'ctrl+n' },
+      { id:'mapManager',  label:'导图管理', def:'ctrl+m' },
+      { id:'export',      label:'导出', def:'ctrl+e' },
+      { id:'newRoot',     label:'当前画布新建分支', def:'alt+n' }
+    ];
+    const DEFAULT_KEYMAP = {};
+    SHORTCUT_ACTIONS.forEach(a => DEFAULT_KEYMAP[a.id] = a.def);
+    const keymap = reactive({ ...DEFAULT_KEYMAP });
+    // 保留、不允许绑定的按键（浏览器/系统/固定导航）
+    const RESERVED = new Set(['escape','space','f5','f12','ctrl+w','ctrl+t','ctrl+shift+i','ctrl+shift+j','ctrl+r','ctrl+l','ctrl+shift+r','alt+f4']);
+    // 把键盘事件规范化为组合串，如 ctrl+a / tab / f2 / delete / alt+n
+    const comboOf = (e) => {
+      const k = e.key;
+      if (!k) return null;
+      if (k === 'Control' || k === 'Alt' || k === 'Shift' || k === 'Meta') return null;
+      const parts = [];
+      if (e.ctrlKey || e.metaKey) parts.push('ctrl');
+      if (e.altKey) parts.push('alt');
+      if (e.shiftKey) parts.push('shift');
+      let name = k.length === 1 ? k.toLowerCase() : k.toLowerCase();
+      parts.push(name);
+      return parts.join('+');
+    };
+    // 组合串转可读文本
+    const comboLabel = (combo) => !combo ? '—' : combo.split('+').map(s => {
+      if (s === 'ctrl') return 'Ctrl';
+      if (s === 'alt') return 'Alt';
+      if (s === 'shift') return 'Shift';
+      if (s.startsWith('arrow')) return ({arrowleft:'←',arrowright:'→',arrowup:'↑',arrowdown:'↓'})[s] || s;
+      return s.length === 1 ? s.toUpperCase() : s.charAt(0).toUpperCase() + s.slice(1);
+    }).join('+');
+    const showShortcuts = ref(false);
+    const recordingAction = ref(null);
+    const recordConflict = ref('');
+    // 查某 combo 是否被其它动作占用，返回动作中文名（无冲突返回空）
+    const conflictAction = (exceptId, combo) => {
+      const hit = SHORTCUT_ACTIONS.find(a => a.id !== exceptId && keymap[a.id] === combo);
+      return hit ? hit.label : '';
+    };
+    const startRecord = (id) => { recordingAction.value = id; recordConflict.value = ''; };
+    const cancelRecord = () => { recordingAction.value = null; recordConflict.value = ''; };
+    const onCaptureKey = (e) => {
+      if (!recordingAction.value) return;
+      e.preventDefault(); e.stopPropagation();
+      if (e.key === 'Escape') { cancelRecord(); return; }
+      const combo = comboOf(e);
+      if (!combo) return;
+      const id = recordingAction.value;
+      if (RESERVED.has(combo)) { recordConflict.value = '「' + comboLabel(combo) + '」为系统保留按键，无法绑定'; return; }
+      const other = conflictAction(id, combo);
+      if (other) { recordConflict.value = '按键冲突：已被【' + other + '】占用，请先清空或更换'; return; }
+      keymap[id] = combo;
+      recordingAction.value = null; recordConflict.value = '';
+      savePref();
+      toast('已绑定 ' + comboLabel(combo));
+    };
+    const clearBinding = (id) => { keymap[id] = ''; savePref(); };
+    const resetKeymap = () => { Object.keys(DEFAULT_KEYMAP).forEach(k => keymap[k] = DEFAULT_KEYMAP[k]); savePref(); toast('已恢复默认快捷键'); };
+    const openShortcuts = () => { closeCtxMenu(); showMenu.value = false; showShortcuts.value = true; };
+
     const darkMode = ref(false);
     const loadPref = () => {
       try {
@@ -685,12 +1033,19 @@ createApp({
         if (raw) {
           const p = JSON.parse(raw);
           if (p.darkMode) darkMode.value = true;
+          if (p.toolMode === 'pan' || p.toolMode === 'select') toolMode.value = p.toolMode;
+          if (p.keymap && typeof p.keymap === 'object') {
+            Object.keys(DEFAULT_KEYMAP).forEach(id => {
+              const v = p.keymap[id];
+              if (typeof v === 'string' && v.trim()) keymap[id] = v.trim().toLowerCase();
+            });
+          }
         }
       } catch(e) {}
       applyPref();
     };
     const savePref = () => {
-      try { localStorage.setItem(PREF_KEY, JSON.stringify({ darkMode: darkMode.value })); } catch(e) {}
+      try { localStorage.setItem(PREF_KEY, JSON.stringify({ darkMode: darkMode.value, toolMode: toolMode.value, keymap: { ...keymap } })); } catch(e) {}
     };
     const applyPref = () => {
       document.body.classList.toggle('dark', darkMode.value);
@@ -700,6 +1055,7 @@ createApp({
       applyPref(); savePref();
       toast(darkMode.value ? '夜间模式' : '日间模式');
     };
+
     // ===== 树工具（跨所有根节点） =====
     const findNode = (id) => {
       if (!currentMap.value) return null;
@@ -735,12 +1091,14 @@ createApp({
       return currentMap.value.roots.some(r => r.id === id);
     };
     const isRootSelected = computed(() => isRootNode(selectedId.value));
+
     // ===== 布局（多根节点） =====
     const layout = computed(() => {
       const map = currentMap.value;
       const allNodes = [];
       const allLinks = [];
       if (!map || !map.roots.length) return { nodes: allNodes, links: allLinks, width: 300, height: 200 };
+
       let curX = 60;
       map.roots.forEach((root, rootIdx) => {
         const widthMap = new Map();
@@ -755,6 +1113,7 @@ createApp({
         };
         calcWidth(root);
         const rootW = widthMap.get(root.id);
+
         const posMap = new Map();
         const branchMap = new Map();
         const assignBranch = (node, branch) => {
@@ -762,9 +1121,11 @@ createApp({
           if (node.children) node.children.forEach((c, i) => assignBranch(c, node === root ? i : branch));
         };
         assignBranch(root, 0);
+
         const position = (node, cx, depth, accOX, accOY) => {
           const myOX = node.offsetX || 0;
           const myOY = node.offsetY || 0;
+          // 水平方向：子节点基准 cx 已由父 fx（含父偏移）推导，故 accOX 不再累加父 myOX，避免子树水平双倍位移
           const fx = cx + myOX + accOX;
           const fy = depth * (NH + VGAP) + myOY + accOY;
           posMap.set(node.id, { cx: fx, y: fy, depth });
@@ -774,22 +1135,25 @@ createApp({
             total += (node.children.length - 1) * HGAP;
             let x = fx - total / 2;
             for (const c of node.children) {
-              position(c, x + widthMap.get(c.id)/2, depth+1, accOX + myOX, accOY + myOY);
+              position(c, x + widthMap.get(c.id)/2, depth+1, accOX, accOY + myOY);
               x += widthMap.get(c.id) + HGAP;
             }
           }
         };
         position(root, curX + rootW/2, 0, 0, 0);
+
         // 收集
         const collect = (node) => {
           const p = posMap.get(node.id);
           const branch = branchMap.get(node.id);
           const h = node === root ? ROOT_H : NH;
-          const col = node === root
+          let col = node === root
             ? { bg: '#1a7f5a', border: '#1a7f5a', text: '#fff' }
             : p.depth === 1
               ? COLORS[branch % COLORS.length]
               : { bg: '#fff', border: COLORS[branch % COLORS.length].border, text: '#333' };
+          // 用户自定义上色优先（含根节点）
+          if (Number.isInteger(node.color) && NODE_PALETTE[node.color]) col = NODE_PALETTE[node.color];
           allNodes.push({
             id: node.id, text: node.text, tags: node.tags || [],
             x: p.cx - NW/2, y: p.y,
@@ -809,8 +1173,10 @@ createApp({
           });
         };
         collect(root);
+
         curX += rootW + ROOT_GAP;
       });
+
       // 边界
       let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
       allNodes.forEach(n => {
@@ -820,9 +1186,11 @@ createApp({
       });
       if (!isFinite(minX)) { minX = 0; maxX = 300; minY = 0; maxY = 200; }
       const pad = 60;
-      const W = maxX - minX + pad * 2;
-      const H = maxY - minY + pad * 2;
-      const ox = pad - minX, oy = pad - minY;
+      // 固定留白基准：自动布局横向恒从 60 起、纵向从 0 起，故平移量取常量，
+      // 不随节点的自由拖动 offset 变化，避免拖动最左/最上节点时被归一化反向抵消（鼠标错位根因）
+      const ox = 0, oy = pad;
+      const W = Math.max(maxX, 0) + pad;
+      const H = (maxY - Math.min(0, minY)) + pad * 2;
       allNodes.forEach(n => { n.x += ox; n.y += oy; });
       allLinks.forEach(l => {
         // 重新计算带偏移的path（简单方式：解析数字加偏移）
@@ -831,15 +1199,18 @@ createApp({
           l.d = 'M' + (nums[0]+ox) + ',' + (nums[1]+oy) + ' C' + (nums[2]+ox) + ',' + (nums[3]+oy) + ' ' + (nums[4]+ox) + ',' + (nums[5]+oy) + ' ' + (nums[6]+ox) + ',' + (nums[7]+oy);
         }
       });
+
       return { nodes: allNodes, links: allLinks, width: W, height: H };
     });
+
     // 节点坐标映射
     const nodePosMap = computed(() => {
       const m = new Map();
       layout.value.nodes.forEach(n => m.set(n.id, { cx: n.x + NW/2, cy: n.y + (n.isRoot ? ROOT_H : NH)/2 }));
       return m;
     });
-    // 自由连接线
+
+    // 自由连接线（含用户可拖拽的控制点）
     const connLines = computed(() => {
       const lines = [];
       if (!currentMap.value) return lines;
@@ -847,13 +1218,29 @@ createApp({
       currentMap.value.connections.forEach(c => {
         const a = pm.get(c.from), b = pm.get(c.to);
         if (a && b) {
-          const mx = (a.cx + b.cx) / 2;
-          const my = (a.cy + b.cy) / 2 - 40;
-          lines.push({ id: c.id, d: 'M' + a.cx + ',' + a.cy + ' Q' + mx + ',' + my + ' ' + b.cx + ',' + b.cy });
+          const baseMx = (a.cx + b.cx) / 2;
+          const baseMy = (a.cy + b.cy) / 2 - 40;
+          const ox = (c.cp && c.cp.ox) || 0;
+          const oy = (c.cp && c.cp.oy) || 0;
+          const cpx = baseMx + ox, cpy = baseMy + oy;
+          // 端点手柄移到节点朝线一侧的边缘，避免被节点遮挡
+          const edgePt = (sx, sy, tx, ty, rad) => {
+            const dx = tx - sx, dy = ty - sy, len = Math.hypot(dx, dy) || 1;
+            return [sx + dx / len * rad, sy + dy / len * rad];
+          };
+          const ER = NW / 2 + 8;
+          const [ahx, ahy] = edgePt(a.cx, a.cy, cpx, cpy, ER);
+          const [bhx, bhy] = edgePt(b.cx, b.cy, cpx, cpy, ER);
+          lines.push({
+            id: c.id, conn: c,
+            ax:a.cx, ay:a.cy, bx:b.cx, by:b.cy, cpx, cpy, ahx, ahy, bhx, bhy,
+            d: 'M' + a.cx + ',' + a.cy + ' Q' + cpx + ',' + cpy + ' ' + b.cx + ',' + b.cy
+          });
         }
       });
       return lines;
     });
+
     // 连接批注标签
     const connNotes = computed(() => {
       const notes = [];
@@ -862,10 +1249,15 @@ createApp({
       currentMap.value.connections.forEach(c => {
         if (!c.note || !c.note.trim()) return;
         const a = pm.get(c.from), b = pm.get(c.to);
-        if (a && b) notes.push({ id: c.id, text: c.note, x: (a.cx + b.cx)/2, y: (a.cy + b.cy)/2 - 30 });
+        if (a && b) {
+          const cpx = (a.cx+b.cx)/2 + ((c.cp&&c.cp.ox)||0);
+          const cpy = (a.cy+b.cy)/2 - 40 + ((c.cp&&c.cp.oy)||0);
+          notes.push({ id: c.id, text: c.note, x: cpx, y: cpy - 14 });
+        }
       });
       return notes;
     });
+
     // 标签联想线
     const relatedLines = computed(() => {
       if (!activeTag.value) return [];
@@ -883,11 +1275,13 @@ createApp({
         }
       return lines;
     });
+
     const isRelated = (id) => {
       if (!activeTag.value) return false;
       const n = findNode(id);
       return n && n.tags && n.tags.indexOf(activeTag.value) >= 0;
     };
+
     const connList = computed(() => {
       if (!currentMap.value) return [];
       return currentMap.value.connections.map(c => {
@@ -895,11 +1289,13 @@ createApp({
         return { id: c.id, fromText: a ? a.text : '?', toText: b ? b.text : '?', note: c.note || '' };
       });
     });
+
     const canvasStyle = computed(() => ({
       width: layout.value.width + 'px',
       height: layout.value.height + 'px',
       transform: 'translate(' + view.tx + 'px,' + view.ty + 'px) scale(' + view.scale + ')'
     }));
+
     // ===== 视图 =====
     const fitView = () => {
       const wrap = wrapRef.value;
@@ -912,6 +1308,7 @@ createApp({
       view.tx = (ww - W * view.scale) / 2;
       view.ty = 20;
     };
+
     // ===== 画布触摸 =====
     let touchState = null;
     const onCanvasTouchStart = (e) => {
@@ -935,7 +1332,7 @@ createApp({
         if (wrap) {
           const rect = wrap.getBoundingClientRect();
           const cx = (e.touches[0].clientX + e.touches[1].clientX)/2 - rect.left;
-          const cy = (e.touches[0].clientY + e.touches[1].clientY)/2 - rect.top;
+          const cy = (e.touches[0].clientX + e.touches[1].clientY)/2 - rect.top;
           const wx = (cx - touchState.tx)/touchState.scale, wy = (cy - touchState.ty)/touchState.scale;
           view.scale = Math.max(0.15, Math.min(3, touchState.scale * dist/touchState.dist));
           view.tx = cx - wx*view.scale; view.ty = cy - wy*view.scale;
@@ -950,10 +1347,11 @@ createApp({
     const onCanvasTouchEnd = (e) => {
       if (touchState && touchState.type === 'pan' && !touchState.moved && e.changedTouches.length === 1) {
         if (connectingFrom.value !== null) connectingFrom.value = null;
-        else { selectedId.value = null; activeTag.value = null; }
+        else clearSelection();
       }
       touchState = null;
     };
+
     // 滚轮缩放（以鼠标位置为锚点）
     const onWheel = (e) => {
       const wrap = wrapRef.value;
@@ -966,21 +1364,77 @@ createApp({
       view.scale = ns;
       view.tx = cx - wx*ns; view.ty = cy - wy*ns;
     };
-    // 鼠标拖拽画布
+    // 鼠标在画布空白处：左键=框选，中键/空格+左键=平移
     let mouseState = null;
+    const hitNodesInRect = (x0, y0, x1, y1) => {
+      const l = Math.min(x0,x1), r = Math.max(x0,x1), t = Math.min(y0,y1), b = Math.max(y0,y1);
+      const ids = [];
+      layout.value.nodes.forEach(n => {
+        const h = n.isRoot ? ROOT_H : NH;
+        if (n.x < r && n.x + NW > l && n.y < b && n.y + h > t) ids.push(n.id);
+      });
+      return ids;
+    };
     const onCanvasMouseDown = (e) => {
-      if (e.target.closest('.node') || editing.value || editingTag.value) return;
-      mouseState = { startX:e.clientX, startY:e.clientY, tx:view.tx, ty:view.ty, moved:false };
+      if (editing.value || editingTag.value || renamingMap.value) return;
+      if (e.target.closest('.node')) return;
+      closeCtxMenu();
+      if (!e.target.closest('.lines')) selectedConnId.value = null;   // 点空白取消连接线选中（点线本身保留）
+      const panMode = (e.button === 1) || spaceDown.value || toolMode.value === 'pan';   // 中键/空格/平移模式
+      if (e.button === 2) return;                            // 右键交给 contextmenu
+      e.preventDefault();
+      const wrap = wrapRef.value;
+      const rect = wrap ? wrap.getBoundingClientRect() : {left:0, top:0};
+      const startSX = e.clientX - rect.left, startSY = e.clientY - rect.top;
+      if (panMode) isPanning.value = true;
+      mouseState = {
+        mode: panMode ? 'pan' : 'marquee',
+        startX:e.clientX, startY:e.clientY, startSX, startSY,
+        tx:view.tx, ty:view.ty, moved:false, additive: e.shiftKey
+      };
+      if (!panMode) {
+        marquee.show = true; marquee.x = startSX; marquee.y = startSY; marquee.w = 0; marquee.h = 0;
+        marqueeHitIds.value = [];
+      }
       const onMove = (ev) => {
-        const dx = ev.clientX - mouseState.startX;
-        const dy = ev.clientY - mouseState.startY;
-        if (Math.abs(dx)>3 || Math.abs(dy)>3) mouseState.moved = true;
-        view.tx = mouseState.tx + dx; view.ty = mouseState.ty + dy;
+        const sdx = ev.clientX - mouseState.startX, sdy = ev.clientY - mouseState.startY;
+        if (Math.abs(sdx)>3 || Math.abs(sdy)>3) mouseState.moved = true;
+        if (mouseState.mode === 'pan') {
+          view.tx = mouseState.tx + sdx; view.ty = mouseState.ty + sdy;
+        } else {
+          const curSX = ev.clientX - rect.left, curSY = ev.clientY - rect.top;
+          marquee.x = Math.min(startSX, curSX); marquee.y = Math.min(startSY, curSY);
+          marquee.w = Math.abs(curSX - startSX); marquee.h = Math.abs(curSY - startSY);
+          const a = clientToCanvas(mouseState.startX, mouseState.startY);
+          const b = clientToCanvas(ev.clientX, ev.clientY);
+          marqueeHitIds.value = hitNodesInRect(a.x, a.y, b.x, b.y);
+        }
       };
       const onUp = () => {
-        if (!mouseState.moved) {
-          if (connectingFrom.value !== null) connectingFrom.value = null;
-          else { selectedId.value = null; activeTag.value = null; }
+        if (mouseState.mode === 'pan') {
+          isPanning.value = false;
+          if (!mouseState.moved) {
+            if (connectingFrom.value !== null) connectingFrom.value = null;
+            else clearSelection();
+          }
+        } else {
+          marquee.show = false;
+          if (mouseState.moved) {
+            const hits = marqueeHitIds.value.slice();
+            if (mouseState.additive) {
+              const set = new Set(selectedIds.value);
+              hits.forEach(id => set.has(id) ? set.delete(id) : set.add(id));
+              selectedIds.value = Array.from(set);
+            } else {
+              selectedIds.value = hits;
+            }
+            selectedId.value = selectedIds.value.length ? selectedIds.value[selectedIds.value.length-1] : null;
+            marqueeHitIds.value = [];
+            if (selectedIds.value.length) toast('已选中 '+selectedIds.value.length+' 个节点');
+          } else {
+            if (connectingFrom.value !== null) connectingFrom.value = null;
+            else clearSelection();
+          }
         }
         mouseState = null;
         window.removeEventListener('mousemove', onMove);
@@ -989,6 +1443,7 @@ createApp({
       window.addEventListener('mousemove', onMove);
       window.addEventListener('mouseup', onUp);
     };
+
     // ===== 节点拖动 + 点击 =====
     let lastTapTime = 0, lastTapNode = null;
     const onNodeTouchStart = (node, e) => {
@@ -1036,10 +1491,31 @@ createApp({
       lastTapNode = node.id;
       dragState = null;
     };
-    // 鼠标拖动
+
+    // 判断 nodeId 是否有祖先落在选中集合内（用于避免整组拖动时双倍位移）
+    const hasSelectedAncestor = (nodeId, set) => {
+      let p = findParent(nodeId);
+      while (p) {
+        if (set.has(p.id)) return true;
+        p = findParent(p.id);
+      }
+      return false;
+    };
+    let dragGroupSet = null;
+    const isGroupDragging = (id) => dragState && dragState.moved && dragGroupSet && dragGroupSet.has(id);
+    // 鼠标拖动节点（支持多选整组）
     const onNodeMouseDown = (node, e) => {
       if (editing.value || editingTag.value) return;
-      dragState = { nodeId: node.id, startX: e.clientX, startY: e.clientY, offsetX: node.offsetX||0, offsetY: node.offsetY||0, moved:false, startTime: Date.now() };
+      if (e.button === 2) return;                 // 右键交给 contextmenu
+      closeCtxMenu();
+      // 拖动目标集合：若节点已在多选集合内则整组，否则仅自己
+      const inMulti = selectedIds.value.indexOf(node.id) >= 0 && selectedIds.value.length > 1;
+      const ids = inMulti ? selectedIds.value.slice() : [node.id];
+      const set = new Set(ids);
+      dragGroupSet = set;
+      const anchors = {};
+      ids.forEach(id => { const x = findNode(id); if (x) anchors[id] = { ox: x.offsetX||0, oy: x.offsetY||0 }; });
+      dragState = { nodeId: node.id, ids, anchors, startX: e.clientX, startY: e.clientY, moved:false, startTime: Date.now() };
       dragNodeId.value = node.id;
       const onMove = (ev) => {
         if (!dragState) return;
@@ -1047,14 +1523,18 @@ createApp({
         const dy = (ev.clientY - dragState.startY)/view.scale;
         if (Math.abs(dx)>4 || Math.abs(dy)>4) {
           dragState.moved = true;
-          const n = findNode(dragState.nodeId);
-          if (n) { n.offsetX = dragState.offsetX + dx; n.offsetY = dragState.offsetY + dy; }
+          dragState.ids.forEach(id => {
+            if (hasSelectedAncestor(id, set)) return;   // 由选中祖先带动，避免双倍位移
+            const n = findNode(id), a = dragState.anchors[id];
+            if (n && a) { n.offsetX = a.ox + dx; n.offsetY = a.oy + dy; }
+          });
         }
       };
       const onUp = () => {
         if (dragState) {
           if (dragState.moved) saveMaps();
           dragNodeId.value = null;
+          dragGroupSet = null;
           dragState = null;
         }
         window.removeEventListener('mousemove', onMove);
@@ -1063,14 +1543,15 @@ createApp({
       window.addEventListener('mousemove', onMove);
       window.addEventListener('mouseup', onUp);
     };
-    const onNodeClick = (node) => {
+
+    const onNodeClick = (node, ev) => {
       if (dragState && dragState.moved) return;
       if (connectingFrom.value !== null) {
         if (connectingFrom.value !== node.id) {
           const exists = currentMap.value.connections.some(c =>
             (c.from === connectingFrom.value && c.to === node.id) || (c.from === node.id && c.to === connectingFrom.value));
           if (!exists) {
-            currentMap.value.connections.push({ id: connId++, from: connectingFrom.value, to: node.id, note: '' });
+            currentMap.value.connections.push({ id: connId++, from: connectingFrom.value, to: node.id, note: '', cp:{ ox:0, oy:0 } });
             saveMaps();
             toast('已创建连接');
           } else toast('连接已存在');
@@ -1078,15 +1559,100 @@ createApp({
         connectingFrom.value = null;
         return;
       }
-      selectedId.value = node.id;
+      if (ev && ev.shiftKey) {
+        // Shift+点击：加入/移出多选
+        const arr = selectedIds.value.slice();
+        const i = arr.indexOf(node.id);
+        if (i >= 0) arr.splice(i,1); else arr.push(node.id);
+        selectedIds.value = arr;
+        selectedId.value = arr.length ? node.id : null;
+      } else {
+        setSingleSelection(node.id);
+      }
     };
-    // 重置节点位置
+
+    // 重置节点位置（支持多选）
     const resetNodePosition = () => {
       showMenu.value = false;
-      if (!selectedId.value) { toast('请先选中节点'); return; }
-      const n = findNode(selectedId.value);
-      if (n) { n.offsetX = 0; n.offsetY = 0; saveMaps(); toast('已重置位置'); }
+      const ids = selectedIds.value.length ? selectedIds.value : (selectedId.value ? [selectedId.value] : []);
+      if (!ids.length) { toast('请先选中节点'); return; }
+      const set = new Set(ids);
+      ids.forEach(id => { if (!hasSelectedAncestor(id,set)) { const n = findNode(id); if (n) { n.offsetX = 0; n.offsetY = 0; } } });
+      saveMaps(); toast('已重置位置');
     };
+
+    // ===== 右键上下文菜单 =====
+    const openCtxAt = (clientX, clientY, type, node) => {
+      const mw = 230, mh = type === 'node' ? 320 : 240;
+      const x = Math.min(clientX, window.innerWidth - mw - 8);
+      const y = Math.min(clientY, window.innerHeight - mh - 8);
+      ctxMenu.type = type;
+      ctxMenu.nodeId = node ? node.id : null;
+      ctxMenu.nodeText = node ? node.text : '';
+      ctxMenu.x = Math.max(8, x); ctxMenu.y = Math.max(8, y);
+      ctxMenu.show = true;
+    };
+    const closeCtxMenu = () => { ctxMenu.show = false; };
+    const onNodeContextMenu = (node, e) => {
+      if (editing.value || editingTag.value) return;
+      // 若右键节点不在当前多选集合内，则单选它
+      if (selectedIds.value.indexOf(node.id) < 0) setSingleSelection(node.id);
+      openCtxAt(e.clientX, e.clientY, 'node', node);
+    };
+    const onCanvasContextMenu = (e) => {
+      if (editing.value || editingTag.value || renamingMap.value) return;
+      openCtxAt(e.clientX, e.clientY, 'canvas', null);
+    };
+    const ctxEdit = () => { closeCtxMenu(); const n = findNode(selectedId.value); if (n) openEditFor(n); };
+    const ctxAddChild = () => { closeCtxMenu(); addChild(); };
+    const ctxAddSibling = () => { closeCtxMenu(); addSibling(); };
+    const ctxTag = () => { closeCtxMenu(); openTagEditor(); };
+    const ctxConnect = () => { closeCtxMenu(); startConnect(); };
+    const ctxReset = () => { closeCtxMenu(); resetNodePosition(); };
+    const ctxDelete = () => { closeCtxMenu(); deleteNode(); };
+    const ctxSelectAll = () => { closeCtxMenu(); selectAllNodes(); };
+    const ctxNewRoot = () => { closeCtxMenu(); newRootInCurrent(); };
+    const ctxFit = () => { closeCtxMenu(); fitView(); };
+    const ctxDark = () => { closeCtxMenu(); toggleDark(); };
+    const ctxExport = () => { closeCtxMenu(); openExport(); };
+    const ctxManager = () => { closeCtxMenu(); openMapManager(); };
+
+    // ===== 节点自由上色（作用于全部选中节点，至多 7 色）=====
+    const paintSelection = (idx) => {
+      closeCtxMenu();
+      const ids = selectedIds.value.length ? selectedIds.value.slice() : (selectedId.value ? [selectedId.value] : []);
+      if (!ids.length) { toast('请先选中节点'); return; }
+      ids.forEach(id => { const n = findNode(id); if (n) { n.color = (idx === null || idx === undefined) ? undefined : idx; } });
+      saveMaps();
+      toast(idx === null || idx === undefined ? '已恢复自动配色' : '已上色');
+    };
+    const ctxPaint = (idx) => paintSelection(idx);
+    // 当前选中节点的颜色（用于右键菜单勾选）
+    const selectedColor = computed(() => {
+      const id = selectedId.value; const n = id ? findNode(id) : null;
+      return n && Number.isInteger(n.color) ? n.color : -1;
+    });
+
+    // ===== 全选 / 方向键微移 =====
+    const selectAllNodes = () => {
+      const ids = layout.value.nodes.map(n => n.id);
+      selectedIds.value = ids;
+      selectedId.value = ids.length ? ids[0] : null;
+    };
+    const nudgeSelection = (dx, dy) => {
+      const ids = selectedIds.value.length ? selectedIds.value : (selectedId.value ? [selectedId.value] : []);
+      if (!ids.length) return;
+      const set = new Set(ids);
+      let changed = false;
+      ids.forEach(id => {
+        if (hasSelectedAncestor(id, set)) return;
+        const n = findNode(id);
+        if (n) { n.offsetX = (n.offsetX||0)+dx; n.offsetY = (n.offsetY||0)+dy; changed = true; }
+      });
+      if (changed) saveMaps();
+    };
+    const openMoreMenu = () => { showMenu.value = true; };
+
     // ===== 节点操作 =====
     const addChild = () => {
       const n = findNode(selectedId.value);
@@ -1109,26 +1675,28 @@ createApp({
       nextTick(fitView);
     };
     const deleteNode = () => {
-      const id = selectedId.value;
-      if (!id) return;
-      if (isRootNode(id)) {
-        // 删除根节点（整个导图分支）
-        if (currentMap.value.roots.length <= 1) { toast('至少保留一个根节点'); return; }
-        askConfirm('删除导图', '确定删除这个根节点及其所有子节点吗？', () => {
-          currentMap.value.roots = currentMap.value.roots.filter(r => r.id !== id);
-          currentMap.value.connections = currentMap.value.connections.filter(c => c.from !== id && c.to !== id);
-          selectedId.value = null;
-          saveMaps();
-          nextTick(fitView);
+      let ids = selectedIds.value.slice();
+      if (!ids.length && selectedId.value) ids = [selectedId.value];
+      if (!ids.length) return;
+      const idset = new Set(ids);
+      const rootIds = ids.filter(id => isRootNode(id));
+      const doRemove = () => {
+        ids.forEach(id => {
+          if (isRootNode(id)) return;
+          const p = findParent(id);
+          if (p) p.children = p.children.filter(c => c.id !== id);
         });
-        return;
-      }
-      const p = findParent(id);
-      if (!p) return;
-      p.children = p.children.filter(c => c.id !== id);
-      currentMap.value.connections = currentMap.value.connections.filter(c => c.from !== id && c.to !== id);
-      selectedId.value = null;
-      saveMaps();
+        if (rootIds.length) {
+          const remain = currentMap.value.roots.filter(r => !idset.has(r.id));
+          currentMap.value.roots = remain.length ? remain : [makeNode('中心主题')];
+        }
+        currentMap.value.connections = currentMap.value.connections.filter(c => !idset.has(c.from) && !idset.has(c.to));
+        clearSelection();
+        saveMaps();
+        nextTick(fitView);
+      };
+      if (rootIds.length) askConfirm('删除节点', '选中内容包含根节点（整幅导图分支），确定删除选中的 ' + ids.length + ' 个节点吗？', doRemove);
+      else doRemove();
     };
     const openEdit = () => { showMenu.value = false; const n = findNode(selectedId.value); if (n) openEditFor(n); };
     const openEditFor = (node) => {
@@ -1141,8 +1709,10 @@ createApp({
       const n = findNode(selectedId.value);
       if (n) { n.text = editText.value.trim() || '未命名'; saveMaps(); }
       editing.value = false;
+      if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
     };
-    const cancelEdit = () => { editing.value = false; };
+    const cancelEdit = () => { editing.value = false; if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); };
+
     // 标签
     const openTagEditor = () => {
       const n = findNode(selectedId.value);
@@ -1155,9 +1725,11 @@ createApp({
       const n = findNode(selectedId.value);
       if (n) { n.tags = tagInput.value.split(/[,，]/).map(t => t.trim()).filter(t => t); saveMaps(); toast('标签已保存'); }
       editingTag.value = false;
+      if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
     };
-    const cancelTag = () => { editingTag.value = false; };
+    const cancelTag = () => { editingTag.value = false; if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); };
     const toggleTagRelation = (tag) => { activeTag.value = activeTag.value === tag ? null : tag; };
+
     // 连接
     const startConnect = () => {
       if (!selectedId.value) { toast('请先选中节点'); return; }
@@ -1174,6 +1746,84 @@ createApp({
     };
     const editConnNote = (id) => { showConnManager.value = true; };
     const openConnManager = () => { showMenu.value = false; showConnManager.value = true; };
+
+    // ===== 连接线自由拖拽 =====
+    const findConn = (id) => currentMap.value ? currentMap.value.connections.find(x => x.id === id) : null;
+    // 画布坐标命中节点，返回节点 id
+    const pointHitNode = (px, py) => {
+      for (const n of layout.value.nodes) {
+        const h = n.isRoot ? ROOT_H : NH;
+        if (px >= n.x && px <= n.x + NW && py >= n.y && py <= n.y + h) return n.id;
+      }
+      return null;
+    };
+    // 左键在线上按下：选中并直接拖拽其控制点，自由改变走线
+    const onConnMouseDown = (c, e) => {
+      if (e.button !== 0) return;
+      closeCtxMenu();
+      clearSelection();
+      selectedConnId.value = c.id;
+      const conn = findConn(c.id);
+      if (!conn) return;
+      const baseMx = (c.ax + c.bx) / 2, baseMy = (c.ay + c.by) / 2 - 40;
+      const onMove = (ev) => {
+        const p = clientToCanvas(ev.clientX, ev.clientY);
+        if (!conn.cp) conn.cp = { ox:0, oy:0 };
+        conn.cp.ox = p.x - baseMx;
+        conn.cp.oy = p.y - baseMy;
+      };
+      const onUp = () => { saveMaps(); window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+    };
+    // 拖动控制点手柄（与在线上拖拽等价）
+    const onCtrlHandleDown = (id, e) => {
+      if (e.button !== 0) return;
+      const line = connLines.value.find(x => x.id === id);
+      const conn = findConn(id);
+      if (!line || !conn) return;
+      const baseMx = (line.ax + line.bx) / 2, baseMy = (line.ay + line.by) / 2 - 40;
+      const onMove = (ev) => {
+        const p = clientToCanvas(ev.clientX, ev.clientY);
+        if (!conn.cp) conn.cp = { ox:0, oy:0 };
+        conn.cp.ox = p.x - baseMx; conn.cp.oy = p.y - baseMy;
+      };
+      const onUp = () => { saveMaps(); window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+    };
+    // 拖动端点手柄，松手时吸附到节点以重新连接
+    const onEndHandleDown = (id, which, e) => {
+      if (e.button !== 0) return;
+      const conn = findConn(id);
+      if (!conn) return;
+      const onUp = (ev) => {
+        window.removeEventListener('mouseup', onUp);
+        const p = clientToCanvas(ev.clientX, ev.clientY);
+        const hit = pointHitNode(p.x, p.y);
+        if (hit != null) {
+          const other = which === 'from' ? conn.to : conn.from;
+          if (hit === conn.from || hit === conn.to) { /* 落回原节点，不变 */ }
+          else if (hit === other) { toast('不能连接自身'); }
+          else {
+            const exists = currentMap.value.connections.some(x => x.id !== id &&
+              ((x.from === (which==='from'?hit:conn.from) && x.to === (which==='to'?hit:conn.to)) ||
+               (x.to === (which==='from'?hit:conn.from) && x.from === (which==='to'?hit:conn.to))));
+            if (exists) toast('连接已存在');
+            else { conn[which] = hit; conn.cp = { ox:0, oy:0 }; saveMaps(); toast('已重新连接'); }
+          }
+        }
+      };
+      window.addEventListener('mouseup', onUp);
+    };
+    const resetConnCtrl = (id) => { const c = findConn(id); if (c) { c.cp = { ox:0, oy:0 }; saveMaps(); toast('连接线已复位'); }; };
+    const deleteSelectedConn = () => {
+      if (!selectedConnId.value) return false;
+      deleteConnection(selectedConnId.value);
+      selectedConnId.value = null;
+      return true;
+    };
+
     // ===== 导出 =====
     const openExport = () => { showMenu.value = false; showExport.value = true; };
     const exportContent = computed(() => {
@@ -1223,6 +1873,7 @@ createApp({
       try { await navigator.clipboard.writeText(exportContent.value); toast('已复制到剪贴板'); }
       catch(e) { const ta = document.querySelector('.export-text'); if (ta) { ta.select(); document.execCommand('copy'); toast('已复制'); } }
     };
+
     // 导出图片
     const generateImage = () => {
       const W = layout.value.width, H = layout.value.height;
@@ -1324,40 +1975,144 @@ createApp({
     watch(exportFmt, (val) => {
       if (val === 'png') { exportImageData.value = ''; nextTick(generateImage); }
     });
+
     // ===== 确认弹窗 =====
     const askConfirm = (title, msg, cb) => { confirmTitle.value = title; confirmMsg.value = msg; confirmCb = cb; showConfirm.value = true; };
     const doConfirm = () => { showConfirm.value = false; if (confirmCb) confirmCb(); confirmCb = null; };
     const openMapManager = () => { showMenu.value = false; showMapManager.value = true; };
     const showHelp = () => { showMenu.value = false; showHelpModal.value = true; };
-    // ===== 生命周期 =====
-    const onKeyDown = (e) => {
-      const tag = (e.target && e.target.tagName) || '';
-      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-      if (e.key === 'Tab') { e.preventDefault(); if (selectedId.value) addChild(); }
-      else if (e.key === 'Enter') { e.preventDefault(); if (selectedId.value && !isRootSelected.value) addSibling(); else if (selectedId.value) addChild(); }
-      else if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); if (selectedId.value) deleteNode(); }
-      else if (e.key === 'F2') { e.preventDefault(); if (selectedId.value) openEdit(); }
-      else if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '+')) { e.preventDefault(); view.scale = Math.min(3, view.scale*1.15); }
-      else if ((e.ctrlKey || e.metaKey) && e.key === '-') { e.preventDefault(); view.scale = Math.max(0.15, view.scale/1.15); }
-      else if ((e.ctrlKey || e.metaKey) && e.key === '0') { e.preventDefault(); fitView(); }
+
+    // ===== 生命周期 / 快捷键 =====
+    const anyModalOpen = () => showMenu.value || showMapManager.value || showConnManager.value ||
+      showExport.value || showConfirm.value || showHelpModal.value || showShortcuts.value ||
+      editing.value || editingTag.value || renamingMap.value;
+    // 删除：优先删除选中的连接线，否则删除选中节点
+    const handleDelete = () => {
+      if (selectedConnId.value && !selectedId.value && !selectedIds.value.length) { deleteSelectedConn(); return; }
+      deleteNode();
     };
+    // 按动作 id 执行命令（供自定义快捷键分发）
+    const runAction = (id) => {
+      // deleteNode 需兼容“只选中连接线”的情况，不做节点选中前置拦截
+      const needSel = ['addChild','addSibling','openEdit','tag','connect','resetPos'];
+      if (needSel.indexOf(id) >= 0 && !selectedId.value && !selectedIds.value.length) return;
+      switch (id) {
+        case 'addChild': addChild(); break;
+        case 'addSibling': if (selectedId.value && !isRootSelected.value) addSibling(); else if (selectedId.value) addChild(); break;
+        case 'deleteNode': handleDelete(); break;
+        case 'openEdit': openEdit(); break;
+        case 'tag': openTagEditor(); break;
+        case 'connect': startConnect(); break;
+        case 'resetPos': resetNodePosition(); break;
+        case 'fit': fitView(); break;
+        case 'dark': toggleDark(); break;
+        case 'more': openMoreMenu(); break;
+        case 'selectAll': selectAllNodes(); break;
+        case 'newMap': newMap(); break;
+        case 'mapManager': openMapManager(); break;
+        case 'export': openExport(); break;
+        case 'newRoot': newRootInCurrent(); break;
+      }
+    };
+    const onKeyDown = (e) => {
+      // 录制快捷键时，由捕获阶段的 onCaptureKey 处理，这里不参与
+      if (recordingAction.value) return;
+      const tag = (e.target && e.target.tagName) || '';
+      if (tag === 'INPUT' || tag === 'TEXTAREA') {
+        // 输入框内仅响应 Esc 关闭当前面板，其余按键交给输入
+        if (e.key === 'Escape') {
+          if (editing.value) cancelEdit();
+          else if (editingTag.value) cancelTag();
+          else if (renamingMap.value) cancelRenameMap();
+        }
+        return;
+      }
+      const key = e.key, k = key.toLowerCase(), ctrl = e.ctrlKey || e.metaKey;
+
+      // 空格：按住后左键拖动画布
+      if (key === ' ' || e.code === 'Space') { spaceDown.value = true; if (!anyModalOpen()) e.preventDefault(); return; }
+
+      // Esc：逐级取消
+      if (key === 'Escape') {
+        if (ctxMenu.show) { closeCtxMenu(); return; }
+        if (connectingFrom.value !== null) { connectingFrom.value = null; return; }
+        if (selectedConnId.value !== null) { selectedConnId.value = null; return; }
+        if (editing.value) { cancelEdit(); return; }
+        if (editingTag.value) { cancelTag(); return; }
+        if (renamingMap.value) { cancelRenameMap(); return; }
+        if (showShortcuts.value){showShortcuts.value=false;return;}
+        if (showMenu.value){showMenu.value=false;return;}
+        if (showExport.value){showExport.value=false;return;}
+        if (showMapManager.value){showMapManager.value=false;return;}
+        if (showConnManager.value){showConnManager.value=false;return;}
+        if (showHelpModal.value){showHelpModal.value=false;return;}
+        if (selectedIds.value.length || selectedId.value) { clearSelection(); return; }
+        return;
+      }
+
+      // 固定缩放（不参与自定义绑定）
+      if (ctrl) {
+        if (k === '=' || k === '+') { e.preventDefault(); view.scale = Math.min(3, view.scale*1.15); return; }
+        if (k === '-') { e.preventDefault(); view.scale = Math.max(0.15, view.scale/1.15); return; }
+        if (k === '0') { e.preventDefault(); fitView(); return; }
+      }
+
+      // 模态打开时，命令与方向键不触发，避免误操作
+      if (anyModalOpen()) return;
+
+      // H：切换 选择/平移 工具模式（固定快捷键）
+      if (!ctrl && !e.altKey && k === 'h') { e.preventDefault(); toggleToolMode(); return; }
+
+      // 方向键微移选中节点（固定）
+      const step = e.shiftKey ? 20 : 8;
+      if (key === 'ArrowLeft')  { e.preventDefault(); nudgeSelection(-step,0); return; }
+      if (key === 'ArrowRight') { e.preventDefault(); nudgeSelection(step,0); return; }
+      if (key === 'ArrowUp')    { e.preventDefault(); nudgeSelection(0,-step); return; }
+      if (key === 'ArrowDown')  { e.preventDefault(); nudgeSelection(0,step); return; }
+
+      // 按用户自定义键位分发
+      const combo = comboOf(e);
+      let actionId = null;
+      if (combo) {
+        for (const a of SHORTCUT_ACTIONS) { if (keymap[a.id] && keymap[a.id] === combo) { actionId = a.id; break; } }
+      }
+      // Backspace 固定作为删除的别名
+      if (!actionId && key === 'Backspace' && keymap.deleteNode) actionId = 'deleteNode';
+      if (actionId) { e.preventDefault(); runAction(actionId); }
+    };
+    const onKeyUp = (e) => {
+      if (e.key === ' ' || e.code === 'Space') spaceDown.value = false;
+    };
+    const onDocMouseDown = (e) => { if (ctxMenu.show && !e.target.closest('.ctx-menu')) closeCtxMenu(); };
     onMounted(() => {
       loadPref();
       loadMaps();
       nextTick(() => { fitView(); window.addEventListener('resize', fitView); });
       window.addEventListener('keydown', onKeyDown);
+      window.addEventListener('keydown', onCaptureKey, true);
+      window.addEventListener('keyup', onKeyUp);
+      window.addEventListener('mousedown', onDocMouseDown);
+      window.addEventListener('blur', () => { spaceDown.value = false; cancelRecord(); });
     });
+
     return {
       maps, currentMapId, currentMap,
-      selectedId, connectingFrom, activeTag, editing, editText, editInput,
-      editingTag, tagInput, tagInputEl, wrapRef, view, dragNodeId,
+      selectedId, selectedIds, isMultiSelected, isInMarquee, marquee,
+      connectingFrom, selectedConnId, activeTag, editing, editText, editInput,
+      editingTag, tagInput, tagInputEl, wrapRef, view, dragNodeId, isGroupDragging,
+      spaceDown, isPanning, ctxMenu, NODE_PALETTE, selectedColor, ctxPaint,
+      toolMode, toggleToolMode,
       renamingMap, renameText, renameInput,
       darkMode, toggleDark,
       layout, connLines, connNotes, relatedLines, isRelated, connList, canvasStyle, isRootSelected,
+      onConnMouseDown, onCtrlHandleDown, onEndHandleDown, resetConnCtrl,
+      keymap, SHORTCUT_ACTIONS, comboLabel, showShortcuts, recordingAction, recordConflict,
+      startRecord, cancelRecord, clearBinding, resetKeymap, openShortcuts,
       showMenu, showMapManager, showConnManager, showExport, exportFmt, exportImageData, exportContent,
       showConfirm, confirmTitle, confirmMsg, showHelpModal, toastMsg,
       fitView, formatTime,
       onCanvasTouchStart, onCanvasTouchMove, onCanvasTouchEnd, onCanvasMouseDown, onWheel,
+      onCanvasContextMenu, onNodeContextMenu, closeCtxMenu,
       onNodeTouchStart, onNodeTouchMove, onNodeTouchEnd, onNodeMouseDown, onNodeClick, openEditFor,
       addChild, addSibling, deleteNode, openEdit, saveEdit, cancelEdit,
       openTagEditor, saveTag, cancelTag, toggleTagRelation,
@@ -1365,6 +2120,9 @@ createApp({
       openExport, copyExport, generateImage, downloadImage,
       switchMap, newMap, deleteMap, startRenameMap, saveRenameMap, cancelRenameMap,
       newRootInCurrent, confirmClearCurrent, resetNodePosition, openMapManager,
+      selectAllNodes, nudgeSelection, openMoreMenu,
+      ctxEdit, ctxAddChild, ctxAddSibling, ctxTag, ctxConnect, ctxReset, ctxDelete,
+      ctxSelectAll, ctxNewRoot, ctxFit, ctxDark, ctxExport, ctxManager,
       askConfirm, doConfirm, showHelp
     };
   }
