@@ -26,31 +26,39 @@ if (!gotLock) {
       webPreferences: {
         contextIsolation: true,
         nodeIntegration: false,
+        sandbox: true,
         spellcheck: false
       }
     });
     mainWindow.loadFile('index.html');
 
-    // 外部链接用系统浏览器打开
+    // 外部链接用系统浏览器打开，禁止应用内导航到非本地地址
     mainWindow.webContents.setWindowOpenHandler(({ url }) => {
       if (url.startsWith('http')) { shell.openExternal(url); return { action: 'deny' }; }
-      return { action: 'allow' };
+      return { action: 'deny' };
+    });
+    mainWindow.webContents.on('will-navigate', (e, url) => {
+      if (!url.startsWith('file://')) { e.preventDefault(); shell.openExternal(url); }
     });
 
-    // 导出 PNG：拦截网页下载，弹出系统保存对话框
+    // 导出文件：渲染层用 Blob URL，每次导出只触发一次 will-download。
+    // 这里用“同步”保存框，在事件返回前确定保存路径，避免异步竞态 / dataURL 时代弹两次框。
     mainWindow.webContents.session.on('will-download', (event, item) => {
       const defaultName = item.getFilename() || '思维导图.png';
-      dialog.showSaveDialog(mainWindow, {
-        title: '保存图片',
+      const ext = (defaultName.split('.').pop() || '').toLowerCase();
+      let filters = [{ name: '所有文件', extensions: ['*'] }];
+      if (ext === 'png') filters = [{ name: 'PNG 图片', extensions: ['png'] }];
+      else if (ext === 'json') filters = [{ name: 'JSON 数据', extensions: ['json'] }];
+      const result = dialog.showSaveDialogSync(mainWindow, {
+        title: '保存到',
         defaultPath: path.join(app.getPath('downloads'), defaultName),
-        filters: [{ name: 'PNG 图片', extensions: ['png'] }]
-      }).then(result => {
-        if (result.canceled || !result.filePath) {
-          item.cancel();
-          return;
-        }
-        item.setSavePath(result.filePath);
-      }).catch(() => item.cancel());
+        filters
+      });
+      if (!result) {
+        item.cancel();
+        return;
+      }
+      item.setSavePath(result);
     });
 
     mainWindow.on('closed', () => { mainWindow = null; });
@@ -86,7 +94,8 @@ if (!gotLock) {
           { role: 'zoomOut', label: '缩小' },
           { role: 'resetZoom', label: '重置缩放' },
           { type: 'separator' },
-          { role: 'togglefullscreen', label: '全屏' }
+          { role: 'togglefullscreen', label: '全屏' },
+          { role: 'toggleDevTools', label: '开发者工具' }
         ]
       },
       {
@@ -99,7 +108,7 @@ if (!gotLock) {
                 type: 'info',
                 title: '关于',
                 message: '思维导图编辑器',
-                detail: '版本 1.0.0\n本地离线运行，数据保存在本机。'
+                detail: '版本 2.0.0\n本地离线运行，数据保存在本机。\n作者：Aztlyyqq'
               });
             }
           }
