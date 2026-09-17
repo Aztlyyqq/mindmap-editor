@@ -84,18 +84,6 @@ npm run dist:win     # 打包 Windows 64 位 → dist/MindMapEditor-win32-x64/
 
 Windows 产物为免安装绿色目录，保持文件夹完整，双击其中的 **MindMapEditor.exe** 即可离线运行。未购买代码签名证书时，SmartScreen 首次可能提示“未知发布者”，选“更多信息 → 仍要运行”。
 
-### 把成品发布到 GitHub Releases（供他人永久下载）
-
-- 网页端：仓库页 → 右侧 **Releases** → **Draft a new release** → 填写 Tag（如 `v2.0.0`）→ 把 `MindMapEditor-win32-x64` 压缩成 zip 拖到 “Attach binaries” 区域 → **Publish release**。
-- 命令行（本机已登录 gh 时）：
-
-  ```bash
-  Compress-Archive -Path dist/MindMapEditor-win32-x64/* -DestinationPath MindMapEditor-win32-x64.zip
-  gh release create v2.0.0 MindMapEditor-win32-x64.zip -t "思维导图编辑器 v2.0.0" -F RELEASE_NOTES.md
-  ```
-
-Release 单个资产上限 2GB，足够容纳本程序；资产命名固定为 `MindMapEditor-win32-x64.zip` 后，`releases/latest/download/` 直链可长期引用。
-
 ## 💾 数据存储说明
 
 数据保存在本机，localStorage 键名：
