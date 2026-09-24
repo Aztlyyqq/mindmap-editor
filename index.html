@@ -411,6 +411,15 @@ body.dark .ctx-head { color:#888; }
 /* ===== 文字颜色 / 词汇解释标注 ===== */
 .ctx-color-row.txt .ctx-dot { width:22px; height:22px; font-size:12px; font-weight:700; }
 .node-text-segs { white-space:pre-wrap; word-break:break-all; }
+.node-resize {
+  position:absolute; right:0; bottom:0; width:12px; height:12px;
+  cursor:nwse-resize; opacity:0; transition:opacity .12s;
+  background:linear-gradient(135deg, transparent 50%, rgba(0,0,0,.28) 50%, rgba(0,0,0,.45) 100%);
+  border-bottom-right-radius:8px; z-index:6;
+}
+.node:hover .node-resize { opacity:.8; }
+.node.selected .node-resize { opacity:1; }
+@media (hover:none){ .node-resize { display:none; } }
 .gloss-word {
   border-radius:3px; padding:0 1px; cursor:help; position:relative;
   -webkit-text-decoration-color:currentColor; text-decoration-color:currentColor;
@@ -588,7 +597,7 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
       </div>
       <div v-for="n in layout.nodes" :key="'n'+n.id"
            class="node" :class="{root:n.isRoot, selected:n.id===selectedId, 'multi-selected':isMultiSelected(n.id), 'in-marquee':isInMarquee(n.id), related:isRelated(n.id), dimmed: activeTag && !isRelated(n.id) && n.id!==selectedId, dragging:dragNodeId===n.id||isGroupDragging(n.id)}"
-           :style="{left:n.x+'px', top:n.y+'px', background:n.bg, borderColor:n.border, color:(n.userTextColor || n.textColor)}"
+           :style="{left:n.x+'px', top:n.y+'px', width:n.w+'px', background:n.bg, borderColor:n.border, color:(n.userTextColor || n.textColor)}"
            @touchstart.stop="onNodeTouchStart(n, $event)"
            @touchmove.stop="onNodeTouchMove($event)"
            @touchend.stop="onNodeTouchEnd(n, $event)"
@@ -603,6 +612,7 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
         </div>
         <span class="node-text-segs"><template v-for="(seg,si) in n.segs" :key="si"><span v-if="seg.mark" class="gloss-word" :class="seg.mark.style"><span v-if="seg.mark.note" class="gw-tip">{{ seg.mark.note }}</span>{{ seg.t }}</span><template v-else>{{ seg.t }}</template></template></span>
         <span v-if="n.seq" class="seq-badge node-seq">{{ n.seq.no }}<span class="gw-tip">{{ n.seq.text }}</span></span>
+        <span class="node-resize" title="拖动调整节点宽度" @mousedown.stop="startResizeNode(n,$event)"></span>
       </div>
       <div v-for="note in connNotes" :key="'cn'+note.id" class="conn-note-label"
            :style="{left:note.x+'px', top:note.y+'px'}" @click.stop="editConnNote(note.id)">
@@ -849,6 +859,7 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
           <p><strong>📝 空白处加文本：</strong>点顶部「文本」模式，在画布空白处按住左键拖出一片区域，松开即生成便签并可直接输入；双击便签编辑、拖动移动、右键可删除或加序号注释，内容随导图保存</p>
           <p><strong>① 序号注释：</strong>右键节点或便签 →「序号注释」，挂编号角标并写解释，悬浮角标查看；编号在当前导图自动递增，导出 PNG 时会在图片底部列出全部序号解释</p>
           <p><strong>✏️ 重命名导图：</strong>画布空白处右键 →「重命名本导图」，或双击顶部导图标签即可改名</p>
+          <p><strong>↔️ 调整节点大小：</strong>把鼠标移到节点右下角，出现斜纹手柄后按住左键左右拖动即可改变节点宽度（文字自动换行），宽度随导图保存，同级节点自动让位</p>
           <p><strong>➕ 新增节点：</strong>加子节点 / 同级 / 新分支时画布保持当前视图，不再自动跳动平移</p>
           <p><strong>🔗 连接：</strong>选中后点「连接」（或按 L）再点另一节点；点一下连接线即可选中，按住拖动可自由改变走线，拖两端圆点可重新接到别的节点，双击连接线复位；更多→管理连接可写批注、删除，选中连接线后按 Delete 删除</p>
           <p><strong>🏷 标签：</strong>选中后点「标签」（或按 T），点击节点上方标签可联想高亮同标签节点</p>
@@ -925,6 +936,8 @@ const { createApp, ref, reactive, computed, onMounted, nextTick, watch } = Vue;
 createApp({
   setup() {
     const NW = 150, NH = 40, ROOT_H = 46, VGAP = 60, HGAP = 20, ROOT_GAP = 100;
+    const MIN_W = 70, MAX_W = 600;          // 节点可拖拽调整的宽度范围（世界坐标 px）
+    const nodeBoxW = (node) => (Number.isFinite(node.w) ? node.w : NW);
     const STORAGE_KEY = 'mindmap_pc_v1';
     const COLORS = [
       {bg:'#e8f5e9', border:'#43a047', text:'#1b5e20'},
@@ -990,6 +1003,9 @@ createApp({
       n.marks = n.marks.filter(m => m && typeof m.word === 'string' && m.word.length)
         .map(m => ({ word: m.word, note: typeof m.note === 'string' ? m.note : '', style: ['b','u','bu'].indexOf(m.style) >= 0 ? m.style : 'u' }));
       if (n.textColor === undefined) n.textColor = null;
+      // 自定义节点宽度（右下角拖拽），越界则回默认
+      if (!Number.isFinite(n.w)) n.w = null;
+      else n.w = Math.round(Math.min(MAX_W, Math.max(MIN_W, n.w)));
       n.seq = cleanSeq(n.seq);
       if (n.offsetX === undefined) n.offsetX = 0;
       if (n.offsetY === undefined) n.offsetY = 0;
@@ -1371,11 +1387,12 @@ createApp({
       map.roots.forEach((root, rootIdx) => {
         const widthMap = new Map();
         const calcWidth = (node) => {
-          if (!node.children || !node.children.length) { widthMap.set(node.id, NW); return NW; }
+          const bw = nodeBoxW(node);
+          if (!node.children || !node.children.length) { widthMap.set(node.id, bw); return bw; }
           let total = 0;
           for (const c of node.children) total += calcWidth(c);
           total += (node.children.length - 1) * HGAP;
-          const w = Math.max(NW, total);
+          const w = Math.max(bw, total);
           widthMap.set(node.id, w);
           return w;
         };
@@ -1428,7 +1445,8 @@ createApp({
             segs: buildSegs(node.text, node.marks),
             userTextColor: node.textColor || '',
             seq: node.seq || null,
-            x: p.cx - NW/2, y: p.y,
+            w: nodeBoxW(node),
+            x: p.cx - nodeBoxW(node)/2, y: p.y,
             isRoot: node === root, bg: col.bg, border: col.border, textColor: col.text
           });
           if (node.children) node.children.forEach(c => {
@@ -1453,7 +1471,7 @@ createApp({
       let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
       allNodes.forEach(n => {
         const h = n.isRoot ? ROOT_H : NH;
-        minX = Math.min(minX, n.x); maxX = Math.max(maxX, n.x + NW);
+        minX = Math.min(minX, n.x); maxX = Math.max(maxX, n.x + n.w);
         minY = Math.min(minY, n.y); maxY = Math.max(maxY, n.y + h);
       });
       if (!isFinite(minX)) { minX = 0; maxX = 300; minY = 0; maxY = 200; }
@@ -1478,7 +1496,7 @@ createApp({
     // 节点坐标映射
     const nodePosMap = computed(() => {
       const m = new Map();
-      layout.value.nodes.forEach(n => m.set(n.id, { cx: n.x + NW/2, cy: n.y + (n.isRoot ? ROOT_H : NH)/2 }));
+      layout.value.nodes.forEach(n => m.set(n.id, { cx: n.x + n.w/2, cy: n.y + (n.isRoot ? ROOT_H : NH)/2 }));
       return m;
     });
 
@@ -1886,6 +1904,27 @@ createApp({
     let dragGroupSet = null;
     const isGroupDragging = (id) => dragState && dragState.moved && dragGroupSet && dragGroupSet.has(id);
     // 鼠标拖动节点（支持多选整组）
+    // 右下角拖拽改变节点宽度
+    const startResizeNode = (ln, e) => {
+      if (e.button !== 0) return;
+      const raw = findNode(ln.id);
+      if (!raw) return;
+      const startX = e.clientX;
+      const startW = nodeBoxW(raw);
+      const apply = (clientX) => {
+        let w = Math.round(startW + (clientX - startX) / view.scale);
+        w = Math.min(MAX_W, Math.max(MIN_W, w));
+        raw.w = w;
+      };
+      const onMove = (ev) => apply(ev.clientX);
+      const onUp = () => {
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('mouseup', onUp);
+        saveMaps();
+      };
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+    };
     const onNodeMouseDown = (node, e) => {
       if (editing.value || editingTag.value) return;
       if (e.button === 2) return;                 // 右键交给 contextmenu
@@ -2419,12 +2458,12 @@ createApp({
       ctx.globalAlpha = 1;
       layout.value.nodes.forEach(n => {
         const h = n.isRoot ? ROOT_H : NH;
-        roundRect(n.x, n.y, NW, h, 8);
+        roundRect(n.x, n.y, n.w, h, 8);
         ctx.fillStyle = n.bg; ctx.fill();
         ctx.strokeStyle = n.border; ctx.lineWidth = 2; ctx.stroke();
         const nodeTextColor = n.userTextColor || n.textColor;
         const segs = n.segs && n.segs.length ? n.segs : [{ t: n.text, mark: null }];
-        const cx = n.x + NW/2, cy = n.y + h/2, maxW = NW - 16;
+        const cx = n.x + n.w/2, cy = n.y + h/2, maxW = n.w - 16;
         const setFont = (bold) => { ctx.font = (bold ? 'bold ' : '') + (n.isRoot ? '14px ' : '13px ') + FONT_FAMILY; };
         const isBoldSeg = (s) => n.isRoot || (s.mark && (s.mark.style === 'b' || s.mark.style === 'bu'));
         let totalW = 0;
@@ -2460,7 +2499,7 @@ createApp({
           tags.forEach(t => { totalW += ctx.measureText(t).width + 12; });
           totalW += (tags.length-1)*3;
           if (n.tags.length > 2) totalW += ctx.measureText('+'+(n.tags.length-2)).width + 13;
-          let curX = n.x + NW/2 - totalW/2;
+          let curX = n.x + n.w/2 - totalW/2;
           const ty = n.y - 18, th = 16;
           tags.forEach(t => {
             const tw = ctx.measureText(t).width + 12;
@@ -2476,7 +2515,7 @@ createApp({
             ctx.fillStyle = '#fff'; ctx.fillText('+'+(n.tags.length-2), curX+tw/2, ty+th/2);
           }
         }
-        if (n.seq) drawBadge(n.x + NW - 4, n.y - 4, n.seq.no);
+        if (n.seq) drawBadge(n.x + n.w - 4, n.y - 4, n.seq.no);
       });
       // 自由文本框（便签）
       notes.forEach(nt => {
@@ -2700,7 +2739,7 @@ createApp({
       fitView, formatTime,
       onCanvasTouchStart, onCanvasTouchMove, onCanvasTouchEnd, onCanvasMouseDown, onWheel,
       onCanvasContextMenu, onNodeContextMenu, onCtxMenuRightTap, closeCtxMenu,
-      onNodeTouchStart, onNodeTouchMove, onNodeTouchEnd, onNodeMouseDown, onNodeClick, openEditFor,
+      onNodeTouchStart, onNodeTouchMove, onNodeTouchEnd, onNodeMouseDown, startResizeNode, onNodeClick, openEditFor,
       addChild, addSibling, deleteNode, openEdit, saveEdit, cancelEdit,
       openTagEditor, saveTag, cancelTag, toggleTagRelation,
       startConnect, deleteConnection, updateConnNote, editConnNote, openConnManager,
