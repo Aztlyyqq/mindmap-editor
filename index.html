@@ -2929,24 +2929,42 @@ createApp({
     };
 
     // 导出图片
-    const generateImage = () => {
-      const baseW = layout.value.width, baseH = layout.value.height;
-      if (!baseW || !baseH || !isFinite(baseW) || !isFinite(baseH)) return;
+    const generateImage = async () => {
       const FONT_FAMILY = '"Microsoft YaHei","PingFang SC",sans-serif';
+      const M = 60;
       const notes = currentMap.value ? (currentMap.value.notes || []) : [];
-      // 序号注释列表（去重、按编号排序）
+      const images = currentMap.value ? (currentMap.value.images || []) : [];
+      const charts = currentMap.value ? (currentMap.value.charts || []) : [];
+
+      // 统一收集所有对象（节点/便签/图片/图表）的包围盒
+      const boxes = [];
+      layout.value.nodes.forEach(n => boxes.push({ x:n.x, y:n.y, w:n.w, h:n.isRoot?ROOT_H:NH, kind:'node', ref:n }));
+      notes.forEach(nt => boxes.push({ x:nt.x, y:nt.y, w:nt.w, h:nt.h, kind:'note', ref:nt }));
+      images.forEach(im => boxes.push({ x:im.x, y:im.y, w:im.w, h:im.h, kind:'image', ref:im }));
+      charts.forEach(ch => boxes.push({ x:ch.x, y:ch.y, w:ch.w, h:ch.h, kind:'chart', ref:ch }));
+
+      // 序号注释列表（去重、按编号排序）——含节点/便签/图片/图表
       const seqMap = new Map();
-      layout.value.nodes.forEach(n => { if (n.seq && Number.isInteger(n.seq.no)) seqMap.set(n.seq.no, n.seq.text); });
-      notes.forEach(nt => { if (nt.seq && Number.isInteger(nt.seq.no)) seqMap.set(nt.seq.no, nt.seq.text); });
+      boxes.forEach(b => { const sq=b.ref.seq; if(sq && Number.isInteger(sq.no)) seqMap.set(sq.no, sq.text); });
       const seqList = [...seqMap.entries()].sort((a,b)=>a[0]-b[0]).map(([no,text])=>({no,text}));
 
-      // 自由文本可能在负坐标或超出节点边界，计算平移与内容尺寸
-      let minNX = Infinity, minNY = Infinity, maxNX = -Infinity, maxNY = -Infinity;
-      notes.forEach(nt => { minNX=Math.min(minNX,nt.x); minNY=Math.min(minNY,nt.y); maxNX=Math.max(maxNX,nt.x+nt.w); maxNY=Math.max(maxNY,nt.y+nt.h); });
-      const shiftX = notes.length && minNX < 60 ? 60 - minNX : 0;
-      const shiftY = notes.length && minNY < 60 ? 60 - minNY : 0;
-      const contentW = Math.max(baseW, notes.length ? maxNX + shiftX + 60 : 0);
-      const contentH = Math.max(baseH, notes.length ? maxNY + shiftY + 60 : 0);
+      // 全局边界 + 统一平移，保证任何对象（含被拖到负坐标的节点）都不被裁切
+      let gMinX=Infinity,gMinY=Infinity,gMaxX=-Infinity,gMaxY=-Infinity;
+      boxes.forEach(b=>{gMinX=Math.min(gMinX,b.x);gMinY=Math.min(gMinY,b.y);gMaxX=Math.max(gMaxX,b.x+b.w);gMaxY=Math.max(gMaxY,b.y+b.h);});
+      if(!boxes.length){ gMinX=0;gMinY=0;gMaxX=300;gMaxY=200; }
+      const shiftX = gMinX < M ? M - gMinX : 0;
+      const shiftY = gMinY < M ? M - gMinY : 0;
+      const contentW = gMaxX + shiftX + M;
+      const contentH = gMaxY + shiftY + M;
+
+      // 预加载图片（dataURL）供离屏绘制
+      const loadImg = (src) => new Promise(res => { const im=new Image(); im.onload=()=>res(im); im.onerror=()=>res(null); im.src=src; });
+      const imgElMap = new Map();
+      for(const im of images){ imgElMap.set(im.id, await loadImg(im.src)); }
+      // 图表离屏绘制（2x 保证清晰）
+      const chartLabels=(ch)=>ch.rows.map(r=>String(r[0]==null?'':r[0]));
+      const chartData=(ch)=>{let vi=1;for(let ci=1;ci<ch.cols.length;ci++){if(ch.rows.some(r=>isFinite(parseFloat(r[ci])))){vi=ci;break;}}return ch.rows.map(r=>{const v=parseFloat(r[vi]);return isFinite(v)?v:0;});};
+      const renderChart=(ch)=>{const sc=document.createElement('canvas');sc.width=Math.round(ch.w*2);sc.height=Math.round(ch.h*2);const c=sc.getContext('2d');c.scale(2,2);compactDraw(c,ch.w,ch.h,ch.chartType,chartLabels(ch),chartData(ch));return sc;};
 
       // 折行
       const mCtx = document.createElement('canvas').getContext('2d');
@@ -3092,6 +3110,18 @@ createApp({
         lines.forEach((ln, i) => ctx.fillText(ln, nt.x + pad, nt.y + pad + i*lh));
         if (nt.seq) drawBadge(nt.x + nt.w - 4, nt.y - 4, nt.seq.no);
       });
+      // 图片
+      boxes.filter(b=>b.kind==='image').forEach(b=>{const im=b.ref,el=imgElMap.get(im.id),X=b.x,Y=b.y;
+        if(el) ctx.drawImage(el,X,Y,b.w,b.h);
+        ctx.strokeStyle='#d0d4dc';ctx.lineWidth=1;ctx.strokeRect(X,Y,b.w,b.h);
+        if(im.seq) drawBadge(X+b.w-4,Y-4,im.seq.no);
+      });
+      // 内嵌图表
+      boxes.filter(b=>b.kind==='chart').forEach(b=>{const ch=b.ref,X=b.x,Y=b.y;
+        ctx.drawImage(renderChart(ch),X,Y,b.w,b.h);
+        ctx.strokeStyle='#d0d4dc';ctx.lineWidth=1;ctx.strokeRect(X,Y,b.w,b.h);
+        if(ch.seq) drawBadge(X+b.w-4,Y-4,ch.seq.no);
+      });
       connNotes.value.forEach(note => {
         ctx.font = '11px ' + FONT_FAMILY;
         const text = note.text;
@@ -3132,8 +3162,8 @@ createApp({
       }
       exportImageData.value = canvas.toDataURL('image/png');
     };
-    const downloadImage = () => {
-      if (!exportImageData.value) generateImage();
+    const downloadImage = async () => {
+      if (!exportImageData.value) await generateImage();
       if (!exportImageData.value) return;
       // dataURL 经 <a download> 在 Electron 下会触发两次系统保存框，先转成 Blob URL 只触发一次
       let href = exportImageData.value;
