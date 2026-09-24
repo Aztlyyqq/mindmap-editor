@@ -1,6 +1,6 @@
 {
   "name": "mindmap-editor-pc",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "思维导图编辑器 PC版（Electron 桌面应用）",
   "main": "main.js",
   "author": "Aztlyyqq",

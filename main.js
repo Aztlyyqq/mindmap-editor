@@ -108,7 +108,7 @@ if (!gotLock) {
                 type: 'info',
                 title: '关于',
                 message: '思维导图编辑器',
-                detail: '版本 2.0.0\n本地离线运行，数据保存在本机。\n作者：Aztlyyqq'
+                detail: '版本 2.2.0\n本地离线运行，数据保存在本机。\n作者：Aztlyyqq'
               });
             }
           }
