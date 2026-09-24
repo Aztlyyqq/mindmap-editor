@@ -472,6 +472,44 @@ body.dark .gloss-style button.on { background:#1a7f5a; color:#fff; border-color:
 .free-note.editing { cursor:text; border-color:#1a7f5a; box-shadow:0 0 0 2px rgba(26,127,90,.35); }
 .free-note-text { white-space:pre-wrap; word-break:break-word; height:100%; overflow:hidden; }
 .free-note-text.ph { color:#b0a98f; }
+.note-resize {
+  position:absolute; right:0; bottom:0; width:13px; height:13px;
+  cursor:nwse-resize; opacity:0; transition:opacity .12s; z-index:6;
+  background:linear-gradient(135deg, transparent 50%, rgba(120,95,0,.35) 50%, rgba(120,95,0,.6) 100%);
+  border-bottom-right-radius:8px;
+}
+.free-note:hover .note-resize { opacity:.85; }
+.free-note.selected .note-resize { opacity:1; }
+@media (hover:none){ .note-resize { display:none; } }
+.viz-mode-row { display:flex; gap:18px; margin-top:10px; font-size:13px; }
+.viz-mode-row label { display:flex; align-items:center; gap:5px; cursor:pointer; }
+.viz-modal { width:min(900px,94vw); }
+.viz-mask { z-index:80; }
+.viz-toolbar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px; }
+.viz-types { display:flex; gap:4px; flex-wrap:wrap; }
+.viz-types button { padding:5px 11px; border:1px solid #dcdfe6; background:#fafafa; border-radius:6px; cursor:pointer; font-size:12px; }
+.viz-types button.active { background:#1a7f5a; color:#fff; border-color:#1a7f5a; }
+.viz-toolbar select { padding:5px 8px; border:1px solid #dcdfe6; border-radius:6px; font-family:inherit; }
+.viz-table-wrap { border:1px solid #e5e6eb; border-radius:8px; overflow:auto; max-height:240px; }
+.viz-table { border-collapse:collapse; width:100%; font-size:12px; }
+.viz-table th { background:#f5f6f8; position:sticky; top:0; }
+.viz-table th input { font-weight:600; background:transparent; text-align:center; }
+.viz-table input { width:100%; border:none; padding:6px 8px; box-sizing:border-box; font-family:inherit; font-size:12px; text-align:center; }
+.viz-table td, .viz-table th { border:1px solid #eceef1; padding:0; }
+.viz-op { width:30px; background:#fafafa; }
+.viz-del-btn { border:none; background:none; color:#e8590c; cursor:pointer; font-size:14px; }
+.viz-add-row { display:flex; gap:8px; padding:8px; }
+.viz-add-row button { padding:4px 12px; border:1px solid #dcdfe6; background:#fff; border-radius:6px; cursor:pointer; font-size:12px; }
+.viz-stats { display:flex; gap:10px; flex-wrap:wrap; margin:12px 0; }
+.viz-stat-card { flex:1; min-width:180px; border:1px solid #e5e6eb; border-radius:8px; padding:8px 10px; }
+.vsc-name { font-weight:600; font-size:12px; margin-bottom:6px; color:#1a7f5a; }
+.vsc-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; font-size:11px; color:#555; }
+.vsc-grid b { color:#999; font-weight:400; margin-right:3px; }
+.viz-canvas { width:100%; height:360px; display:block; border:1px solid #eceef1; border-radius:8px; background:#fff; }
+body.dark .viz-types button, body.dark .viz-add-row button { background:#2a2a2a; color:#ddd; border-color:#444; }
+body.dark .viz-table th, body.dark .viz-op { background:#262626; }
+body.dark .viz-table td, body.dark .viz-table th { border-color:#3a3a3a; }
+
 .free-note-input {
   width:100%; height:100%; box-sizing:border-box; border:none; outline:none; resize:none;
   background:transparent; color:#5d4037; font-size:13px; line-height:1.5; font-family:inherit;
@@ -594,6 +632,7 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
                   @blur="saveNoteEdit" @keydown.esc.stop.prevent="cancelNoteEdit"
                   @mousedown.stop @click.stop @dblclick.stop></textarea>
         <div v-else class="free-note-text" :class="{ph:!nt.text}">{{ nt.text || '双击输入文本' }}</div>
+        <span class="note-resize" title="拖动调整大小" @mousedown.stop="startResizeNote(nt,$event)"></span>
       </div>
       <div v-for="n in layout.nodes" :key="'n'+n.id"
            class="node" :class="{root:n.isRoot, selected:n.id===selectedId, 'multi-selected':isMultiSelected(n.id), 'in-marquee':isInMarquee(n.id), related:isRelated(n.id), dimmed: activeTag && !isRelated(n.id) && n.id!==selectedId, dragging:dragNodeId===n.id||isGroupDragging(n.id)}"
@@ -670,6 +709,8 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
           <div class="menu-item" @click="resetNodePosition"><span class="ico">⟲</span>重置节点位置</div>
           <div class="menu-item" @click="openConnManager"><span class="ico">🔗</span>管理连接<span class="badge" v-if="currentMap && currentMap.connections.length">{{ currentMap.connections.length }}</span></div>
           <div class="menu-item" @click="openExport"><span class="ico">📤</span>导出（Markdown / Mermaid / 图片）</div>
+          <div class="menu-item" @click="openMdImport"><span class="ico">📥</span>Markdown 转导图（粘贴文本生成）</div>
+          <div class="menu-item" @click="openViz"><span class="ico">📊</span>可视化（表格 / 图表统计）</div>
           <div class="menu-item" @click="openMapManager"><span class="ico">📁</span>导图管理（{{ maps.length }}个）</div>
           <div class="menu-item" @click="confirmClearCurrent"><span class="ico">🗑</span>清空当前画布</div>
           <div class="menu-item" @click="openShortcuts"><span class="ico">⌨️</span>快捷键设置（自定义绑定）</div>
@@ -710,6 +751,76 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
     <div class="actions">
       <button class="cancel" @click="cancelRenameMap">取消</button>
       <button class="ok" @click="saveRenameMap">保存</button>
+    </div>
+  </div>
+
+  <!-- Markdown 转思维导图 -->
+  <div class="modal-mask" :class="{show:showMdImport}" @click.self="showMdImport=false">
+    <div class="modal">
+      <div class="modal-header"><span>Markdown 转思维导图</span><button class="close" @click="showMdImport=false">×</button></div>
+      <div class="modal-body">
+        <div class="hint" style="margin-bottom:8px;">粘贴 Markdown（# 为标题、- 为列表，2 空格缩进表示层级，行尾 [标签] 可带标签），将自动生成节点。</div>
+        <textarea class="export-text md-import-textarea" v-model="mdImportText" style="height:220px;"></textarea>
+        <div class="viz-mode-row">
+          <label><input type="radio" value="append" v-model="mdImportMode"> 追加到当前导图</label>
+          <label><input type="radio" value="new" v-model="mdImportMode"> 新建导图</label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="cancel" @click="showMdImport=false">取消</button>
+        <button class="solid" @click="applyMdImport">生成思维导图</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 可视化：表格 / 图表统计 -->
+  <div class="modal-mask viz-mask" :class="{show:showViz}" @click.self="showViz=false">
+    <div class="modal viz-modal">
+      <div class="modal-header"><span>📊 可视化（表格 / 图表统计）</span><button class="close" @click="showViz=false">×</button></div>
+      <div class="modal-body">
+        <div class="viz-toolbar">
+          <div class="viz-types">
+            <button v-for="t in [['bar','柱状'],['hbar','条形'],['pie','饼图'],['line','折线'],['treemap','矩形树']]" :key="t[0]"
+                    :class="{active:vizChartType===t[0]}" @click="vizChartType=t[0]">{{ t[1] }}</button>
+          </div>
+          <select v-model="vizValueCol" title="选择数值列">
+            <option v-for="ci in vizNumericCols" :key="ci" :value="ci">数值列：{{ viz.cols[ci].name }}</option>
+          </select>
+        </div>
+        <div class="viz-table-wrap">
+          <table class="viz-table">
+            <thead><tr>
+              <th v-for="(c,ci) in viz.cols" :key="'h'+ci"><input v-model="c.name"></th>
+              <th class="viz-op"></th>
+            </tr></thead>
+            <tbody><tr v-for="(row,ri) in viz.rows" :key="'r'+ri">
+              <td v-for="(cell,ci) in viz.cols" :key="'c'+ri+'-'+ci">
+                <input :value="row[ci]" @input="onVizCell(ri,ci,$event.target.value)">
+              </td>
+              <td class="viz-op"><button class="viz-del-btn" title="删除此行" @click="vizDelRow(ri)">×</button></td>
+            </tr></tbody>
+          </table>
+          <div class="viz-add-row">
+            <button @click="vizAddRow">＋ 行</button>
+            <button @click="vizAddCol">＋ 列</button>
+            <button @click="vizDelLastCol">－ 末列</button>
+          </div>
+        </div>
+        <div class="viz-stats" v-if="vizStats.length">
+          <div v-for="s in vizStats" :key="'st'+s.ci" class="viz-stat-card">
+            <div class="vsc-name">{{ s.name }}</div>
+            <div class="vsc-grid">
+              <span><b>合计</b>{{ Math.round(s.sum*100)/100 }}</span>
+              <span><b>平均</b>{{ Math.round(s.avg*100)/100 }}</span>
+              <span><b>计数</b>{{ s.cnt }}</span>
+              <span><b>最大</b>{{ s.max }}</span>
+              <span><b>最小</b>{{ s.min }}</span>
+            </div>
+          </div>
+        </div>
+        <canvas ref="vizCanvas" class="viz-canvas"></canvas>
+      </div>
+      <div class="modal-footer"><button class="solid" @click="showViz=false">完成</button></div>
     </div>
   </div>
 
@@ -884,6 +995,9 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
       <div class="ctx-item" @click="ctxAddSibling"><span class="ci-ico">↳</span><span class="ci-label">添加同级</span><span class="kbd2">Enter</span></div>
       <div class="ctx-item" @click="ctxTag"><span class="ci-ico">🏷</span><span class="ci-label">编辑标签</span><span class="kbd2">T</span></div>
       <div class="ctx-item" @click="ctxConnect"><span class="ci-ico">🔗</span><span class="ci-label">从此连接</span><span class="kbd2">L</span></div>
+      <div class="ctx-item" @click="ctxCopyNode"><span class="ci-ico">⧉</span><span class="ci-label">复制节点</span><span class="kbd2">Ctrl+C</span></div>
+      <div class="ctx-item" @click="ctxCutNode"><span class="ci-ico">✂</span><span class="ci-label">剪切节点</span><span class="kbd2">Ctrl+X</span></div>
+      <div class="ctx-item" @click="ctxPasteNode"><span class="ci-ico">📋</span><span class="ci-label">粘贴节点</span><span class="kbd2">Ctrl+V</span></div>
       <div class="ctx-item" @click="ctxReset"><span class="ci-ico">⟲</span><span class="ci-label">重置位置</span><span class="kbd2">R</span></div>
       <div class="ctx-item" @click="ctxGloss"><span class="ci-ico">🔤</span><span class="ci-label">词汇解释 / 标注</span></div>
       <div class="ctx-item" @click="ctxNodeSeq"><span class="ci-ico">①</span><span class="ci-label">序号注释</span></div>
@@ -913,9 +1027,12 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
       <div class="ctx-item danger" @click="ctxNoteDelete"><span class="ci-ico">✕</span><span class="ci-label">删除文本框</span><span class="kbd2">Del</span></div>
     </template>
     <template v-else>
+      <div class="ctx-item" @click="ctxPasteNode"><span class="ci-ico">📋</span><span class="ci-label">在此粘贴节点</span><span class="kbd2">Ctrl+V</span></div>
       <div class="ctx-item" @click="ctxSelectAll"><span class="ci-ico">▣</span><span class="ci-label">全选节点</span><span class="kbd2">Ctrl+A</span></div>
       <div class="ctx-item" @click="ctxNewRoot"><span class="ci-ico">🌱</span><span class="ci-label">新建导图分支</span><span class="kbd2">Alt+N</span></div>
       <div class="ctx-item" @click="ctxEnterText"><span class="ci-ico">📝</span><span class="ci-label">添加文本（拖选区域）</span></div>
+      <div class="ctx-item" @click="ctxMdImport"><span class="ci-ico">📥</span><span class="ci-label">Markdown 转导图</span></div>
+      <div class="ctx-item" @click="ctxViz"><span class="ci-ico">📊</span><span class="ci-label">表格 / 可视化图表</span></div>
       <div class="ctx-item" @click="ctxRenameCurrent"><span class="ci-ico">✏️</span><span class="ci-label">重命名本导图</span></div>
       <div class="ctx-item" @click="ctxFit"><span class="ci-ico">⛶</span><span class="ci-label">适应窗口</span><span class="kbd2">F</span></div>
       <div class="ctx-item" @click="ctxDark"><span class="ci-ico">{{ darkMode?'☀️':'🌙' }}</span><span class="ci-label">{{ darkMode?'日间模式':'夜间模式' }}</span><span class="kbd2">D</span></div>
@@ -1225,6 +1342,9 @@ createApp({
       { id:'fit',         label:'适应窗口', def:'f' },
       { id:'dark',        label:'切换夜间模式', def:'d' },
       { id:'more',        label:'更多菜单', def:'m' },
+      { id:'copyNode',   label:'复制节点', def:'ctrl+c' },
+      { id:'cutNode',    label:'剪切节点', def:'ctrl+x' },
+      { id:'pasteNode',  label:'粘贴节点', def:'ctrl+v' },
       { id:'selectAll',   label:'全选节点', def:'ctrl+a' },
       { id:'newMap',      label:'新建导图', def:'ctrl+n' },
       { id:'mapManager',  label:'导图管理', def:'ctrl+m' },
@@ -1769,6 +1889,18 @@ createApp({
     };
     const cancelNoteEdit = () => { editingNoteId.value = null; };
     let noteDrag = null;
+    // 便签右下角拖拽改变宽高
+    const startResizeNote = (ln, e) => {
+      if (e.button !== 0) return;
+      const raw = findNote(ln.id); if (!raw) return;
+      const sx=e.clientX, sy=e.clientY, sw=raw.w, sh=raw.h;
+      const onMove=(ev)=>{
+        let w=Math.round(sw+(ev.clientX-sx)/view.scale), h=Math.round(sh+(ev.clientY-sy)/view.scale);
+        raw.w=Math.min(1000,Math.max(80,w)); raw.h=Math.min(2000,Math.max(40,h));
+      };
+      const onUp=()=>{window.removeEventListener('mousemove',onMove);window.removeEventListener('mouseup',onUp);saveMaps();};
+      window.addEventListener('mousemove',onMove);window.addEventListener('mouseup',onUp);
+    };
     const onNoteMouseDown = (note, e) => {
       if (e.button !== 0) return;
       if (editingNoteId.value === note.id) return;
@@ -2061,6 +2193,9 @@ createApp({
     const ctxDark = () => { closeCtxMenu(); toggleDark(); };
     const ctxExport = () => { closeCtxMenu(); openExport(); };
     const ctxManager = () => { closeCtxMenu(); openMapManager(); };
+    const ctxCopyNode = () => copySelectedNodes(false);
+    const ctxCutNode = () => copySelectedNodes(true);
+    const ctxPasteNode = () => pasteClipboardNodes();
 
     // ===== 节点自由上色（作用于全部选中节点，至多 7 色）=====
     const paintSelection = (idx) => {
@@ -2163,6 +2298,79 @@ createApp({
       saveMaps();
       // 新增节点保持画布不位移
     };
+    // ===== 节点复制 / 剪切 / 粘贴（可跨导图）=====
+    let nodeClipboard = null;
+    const cloneTree = (node) => JSON.parse(JSON.stringify(node));
+    const reidTree = (node) => {
+      node.id = nextId++;
+      node.offsetX = 0; node.offsetY = 0;
+      (node.children || []).forEach(reidTree);
+    };
+    const collectTreeIds = (node, arr) => {
+      arr.push(node.id); (node.children||[]).forEach(c => collectTreeIds(c, arr));
+    };
+    const countTrees = (trees) => trees.reduce((a,t)=>{const ar=[];collectTreeIds(t,ar);return a+ar.length;},0);
+    // 选中里“顶层”（无选中祖先）的节点，避免重复带子
+    const topSelectedNodes = () => {
+      let ids = selectedIds.value.slice();
+      if (!ids.length && selectedId.value) ids = [selectedId.value];
+      const set = new Set(ids);
+      return ids.filter(id => { const p = findParent(id); return !(p && set.has(p.id)); })
+        .map(id => findNode(id)).filter(Boolean);
+    };
+    const removeNodesNow = (ids) => {
+      const set = new Set(ids);
+      ids.forEach(id => {
+        if (isRootNode(id)) return;
+        const p = findParent(id);
+        if (p) p.children = p.children.filter(c => c.id !== id);
+      });
+      const before = currentMap.value.roots.length;
+      const roots = currentMap.value.roots.filter(r => !set.has(r.id));
+      if (roots.length !== before) currentMap.value.roots = roots.length ? roots : [makeNode('中心主题')];
+      currentMap.value.connections = currentMap.value.connections.filter(c => !set.has(c.from) && !set.has(c.to));
+      clearSelection();
+    };
+    const copySelectedNodes = (isCut) => {
+      const tops = topSelectedNodes();
+      if (!tops.length) { toast('请先选中要复制的节点'); return; }
+      nodeClipboard = tops.map(cloneTree);
+      const cnt = countTrees(nodeClipboard);
+      if (isCut) removeNodesNow(tops.map(n=>n.id));
+      saveMaps();
+      toast(isCut ? ('已剪切 '+cnt+' 个节点') : ('已复制 '+cnt+' 个节点，可切换导图后 Ctrl+V'));
+    };
+    const pasteClipboardNodes = () => {
+      if (!nodeClipboard || !nodeClipboard.length) { toast('剪贴板为空，先 Ctrl+C 复制节点'); return; }
+      const focus = findNode(selectedId.value);
+      const attachParent = (focus && !isRootSelected.value) ? focus : null;
+      const pastedRoots = [];
+      nodeClipboard.forEach(tree => {
+        const c = cloneTree(tree); reidTree(c);
+        if (attachParent) attachParent.children.push(c);
+        else { currentMap.value.roots.push(c); pastedRoots.push(c); }
+      });
+      const cnt = countTrees(nodeClipboard);
+      clearSelection();
+      saveMaps();
+      if (!attachParent && pastedRoots.length) {
+        nextTick(() => {
+          const wcx = (window.innerWidth/2 - view.tx)/view.scale;
+          const wcy = (window.innerHeight/2 - view.ty)/view.scale;
+          pastedRoots.forEach((r,i) => {
+            const ctr = nodePosMap.value.get(r.id);
+            const tx = wcx + i*28 - (ctr?ctr.cx:0), ty = wcy + i*28 - (ctr?ctr.cy:0);
+            const ids=[]; collectTreeIds(r,ids);
+            ids.forEach(id=>{const n=findNode(id); if(n){n.offsetX=(n.offsetX||0)+tx; n.offsetY=(n.offsetY||0)+ty;}});
+          });
+          saveMaps();
+        });
+      } else if (attachParent) {
+        selectedId.value = attachParent.children[attachParent.children.length-1].id;
+      }
+      toast('已粘贴 '+cnt+' 个节点');
+    };
+
     const deleteNode = () => {
       // 优先删除选中的自由文本框
       if (selectedNoteId.value !== null && !selectedIds.value.length && !selectedId.value) { deleteSelectedNote(); return; }
@@ -2613,7 +2821,7 @@ createApp({
     // 按动作 id 执行命令（供自定义快捷键分发）
     const runAction = (id) => {
       // deleteNode 需兼容“只选中连接线”的情况，不做节点选中前置拦截
-      const needSel = ['addChild','addSibling','openEdit','tag','connect','resetPos'];
+      const needSel = ['addChild','addSibling','openEdit','tag','connect','resetPos','copyNode','cutNode'];
       if (needSel.indexOf(id) >= 0 && !selectedId.value && !selectedIds.value.length) return;
       switch (id) {
         case 'addChild': addChild(); break;
@@ -2626,6 +2834,9 @@ createApp({
         case 'fit': fitView(); break;
         case 'dark': toggleDark(); break;
         case 'more': openMoreMenu(); break;
+        case 'copyNode': copySelectedNodes(false); break;
+        case 'cutNode': copySelectedNodes(true); break;
+        case 'pasteNode': pasteClipboardNodes(); break;
         case 'selectAll': selectAllNodes(); break;
         case 'newMap': newMap(); break;
         case 'mapManager': openMapManager(); break;
@@ -2633,6 +2844,226 @@ createApp({
         case 'newRoot': newRootInCurrent(); break;
       }
     };
+    // ===== Markdown 转思维导图 =====
+    const showMdImport = ref(false);
+    const mdImportText = ref('');
+    const mdImportMode = ref('append');
+    const openMdImport = () => {
+      showMenu.value = false;
+      if (!mdImportText.value) mdImportText.value = '# 我的复盘\n\n## 主题一\n- 要点A\n  - 子要点A1\n- 要点B\n\n## 主题二\n- 要点C\n';
+      showMdImport.value = true;
+      nextTick(() => { const el = document.querySelector('.md-import-textarea'); if (el) el.focus(); });
+    };
+    const ctxMdImport = () => { closeCtxMenu(); openMdImport(); };
+    const parseInlineTags = (text) => {
+      let tags = [];
+      const m = text.match(/\[([^\[\]]+)\]\s*$/);
+      if (m) { tags = m[1].split(/[,，]/).map(t => t.trim()).filter(Boolean); text = text.slice(0, m.index).trimEnd(); }
+      return { text, tags };
+    };
+    const parseMarkdown = (raw) => {
+      const lines = raw.replace(/\r/g, '').split('\n');
+      let name = '';
+      const roots = [];
+      const stack = [];
+      const addNode = (depth, text, tags) => {
+        const node = makeNode(text, [], tags);
+        while (stack.length && stack[stack.length-1].depth >= depth) stack.pop();
+        if (depth <= 0 || !stack.length) { roots.push(node); stack.push({ depth, node }); }
+        else { stack[stack.length-1].node.children.push(node); stack.push({ depth, node }); }
+      };
+      let listBaseIndent = null, listTopDepth = 0, currentHeaderDepth = -1;
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        let m;
+        if ((m = line.match(/^#{1,6}\s+(.*)$/))) {
+          const lvl = m[0].match(/^#+/)[0].length;
+          const txt = m[1].trim();
+          if (lvl === 1) { if (!name) name = txt; continue; }
+          const depth = lvl - 2;
+          currentHeaderDepth = depth; listBaseIndent = null;
+          const it = parseInlineTags(txt);
+          addNode(depth, it.text, it.tags);
+          continue;
+        }
+        if ((m = line.match(/^(\s*)(?:[-*+]|\d+\.)\s+(.*)$/))) {
+          const indent = m[1].replace(/\t/g, '  ').length;
+          if (listBaseIndent === null) { listBaseIndent = indent; listTopDepth = currentHeaderDepth >= 0 ? currentHeaderDepth + 1 : 0; }
+          const depth = listTopDepth + Math.max(0, Math.round((indent - listBaseIndent)/2));
+          const it = parseInlineTags(m[2].trim());
+          addNode(depth, it.text, it.tags);
+        }
+      }
+      return { name, roots };
+    };
+    const applyMdImport = () => {
+      const r = parseMarkdown(mdImportText.value);
+      if (!r.roots.length) { toast('未解析出有效内容，请检查 Markdown 格式'); return; }
+      if (mdImportMode.value === 'new') {
+        const m = makeMap(r.name || '导入的导图', r.roots);
+        maps.value.push(m); currentMapId.value = m.id;
+        showMdImport.value = false; saveMaps(); nextTick(fitView);
+        toast('已新建导图，含 ' + r.roots.length + ' 个分支');
+      } else {
+        r.roots.forEach(t => currentMap.value.roots.push(t));
+        showMdImport.value = false; saveMaps();
+        toast('已追加 ' + r.roots.length + ' 个分支到当前导图');
+      }
+    };
+
+    // ===== 可视化：表格 / 统计 / 图表 =====
+    const showViz = ref(false);
+    const vizChartType = ref('bar');
+    const vizValueCol = ref(1);
+    const vizCanvas = ref(null);
+    const viz = reactive({
+      cols: [ {name:'类别'}, {name:'数值'} ],
+      rows: [ ['一月',120],['二月',200],['三月',150],['四月',260],['五月',180] ]
+    });
+    const vizNumericCols = computed(() => viz.cols.map((c,ci)=>ci).filter(ci => {
+      let cnt = 0; viz.rows.forEach(r => { const v = r[ci]; if (v !== '' && v != null && isFinite(parseFloat(v))) cnt++; });
+      return ci > 0 && cnt > 0;
+    }));
+    const vizStats = computed(() => vizNumericCols.value.map(ci => {
+      const vals = viz.rows.map(r => parseFloat(r[ci])).filter(v => isFinite(v));
+      const sum = vals.reduce((a,b) => a+b, 0);
+      return { ci, name: viz.cols[ci].name, cnt: vals.length, sum,
+               avg: vals.length ? sum/vals.length : 0,
+               max: vals.length ? Math.max(...vals) : 0,
+               min: vals.length ? Math.min(...vals) : 0 };
+    }));
+    const onVizCell = (ri, ci, val) => { viz.rows[ri][ci] = val; };
+    const vizAddRow = () => { viz.rows.push(viz.cols.map((c,ci) => ci === 0 ? '新项目' : '')); };
+    const vizAddCol = () => { viz.cols.push({name:'列'+(viz.cols.length+1)}); viz.rows.forEach(r => r.push('')); };
+    const vizDelRow = (ri) => { if (viz.rows.length <= 1) { toast('至少保留一行'); return; } viz.rows.splice(ri,1); };
+    const vizDelCol = (ci) => { if (viz.cols.length <= 1) { toast('至少保留一列'); return; } viz.cols.splice(ci,1); viz.rows.forEach(r => r.splice(ci,1)); };
+    const vizDelLastCol = () => vizDelCol(viz.cols.length - 1);
+    const openViz = () => { showMenu.value = false; showViz.value = true; nextTick(drawVizChart); };
+    const ctxViz = () => { closeCtxMenu(); openViz(); };
+    const CHART_COLORS = ['#4c6ef5','#12b886','#f59f00','#e64980','#7048e8','#1c7ed6','#fab005','#fd7e14','#20c997','#cc5de8'];
+    const niceMax = (v) => { if (!isFinite(v) || v <= 0) return 1; const p = Math.pow(10, Math.floor(Math.log10(v))); const n = v/p; const m = n<=1?1:n<=2?2:n<=2.5?2.5:n<=5?5:10; return m*p; };
+    const squarify = (items, total) => {
+      const out = []; let x = 0, y = 0, w = 1, h = 1; const list = items.slice(); let row = [];
+      const area = (d) => d.v/total;
+      const worst = (r, len) => {
+        const s = r.reduce((a,b) => a+area(b), 0); if (s <= 0) return Infinity; let m = 0;
+        r.forEach(d => { const a = area(d); const q = Math.max(len*len*a/(s*s), s*s/(len*len*a)); if (q > m) m = q; });
+        return m;
+      };
+      const flush = () => {
+        const s = row.reduce((a,b) => a+area(b), 0);
+        if (w >= h) { const rw = s/h; let cy = y;
+          row.forEach(d => { const rh = area(d)/rw; out.push({x, y:cy, w:rw, h:rh, label:d.label, color:d.color}); cy += rh; });
+          x += rw; w -= rw;
+        } else { const rh = s/w; let cx = x;
+          row.forEach(d => { const rw = area(d)/rh; out.push({x:cx, y, w:rw, h:rh, label:d.label, color:d.color}); cx += rw; });
+          y += rh; h -= rh;
+        }
+        row = [];
+      };
+      while (list.length) {
+        const d = list[0], len = Math.min(w, h);
+        if (row.length && worst(row.concat(d), len) > worst(row, len)) flush();
+        else { row.push(d); list.shift(); }
+      }
+      if (row.length) flush();
+      return out;
+    };
+    const drawVizChart = () => {
+      const cv = vizCanvas.value; if (!cv) return;
+      const dpr = window.devicePixelRatio || 1;
+      const cw = cv.clientWidth || 600, chh = cv.clientHeight || 360;
+      cv.width = Math.round(cw*dpr); cv.height = Math.round(chh*dpr);
+      const ctx = cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+      ctx.clearRect(0,0,cw,chh);
+      ctx.font = '12px ' + FONT_FAMILY;
+      const rows = viz.rows;
+      const labels = rows.map(r => String(r[0] == null ? '' : r[0]));
+      const vi = Number(vizValueCol.value) || 1;
+      const data = rows.map(r => { const v = parseFloat(r[vi]); return isFinite(v) ? v : 0; });
+      const type = vizChartType.value;
+      const padL = 48, padR = 16, padT = 16, padB = 38;
+      const plotW = cw-padL-padR, plotH = chh-padT-padB, px = padL, py = padT;
+      const txt = (s,x,y,col,align,base) => { ctx.fillStyle = col || '#555'; ctx.textAlign = align || 'left'; ctx.textBaseline = base || 'middle'; ctx.fillText(String(s), x, y); };
+      const clipLabel = (s, maxW) => { if (ctx.measureText(s).width <= maxW) return s; let o = s; while (o.length > 1 && ctx.measureText(o+'…').width > maxW) o = o.slice(0,-1); return o+'…'; };
+      if (type === 'bar' || type === 'line') {
+        const vmax = niceMax(Math.max(...data, 0)), steps = 5, n = data.length;
+        for (let i = 0; i <= steps; i++) {
+          const yy = py + plotH - plotH*i/steps;
+          ctx.strokeStyle = '#eee'; ctx.beginPath(); ctx.moveTo(px,yy); ctx.lineTo(px+plotW,yy); ctx.stroke();
+          txt(Math.round(vmax*i/steps*100)/100, px-6, yy, '#888', 'right');
+        }
+        if (type === 'bar') {
+          const slot = plotW/n, bw = Math.min(46, slot*0.62);
+          data.forEach((v,i) => {
+            const cxp = px + slot*i + slot/2, bh = plotH*v/vmax;
+            ctx.fillStyle = CHART_COLORS[i%CHART_COLORS.length];
+            ctx.fillRect(cxp-bw/2, py+plotH-bh, bw, bh);
+            txt(clipLabel(labels[i], slot-4), cxp, py+plotH+14, '#666', 'center', 'top');
+          });
+        } else {
+          const X = (i) => px + (n <= 1 ? plotW/2 : plotW*i/(n-1));
+          const Y = (v) => py + plotH - plotH*v/vmax;
+          ctx.strokeStyle = '#4c6ef5'; ctx.lineWidth = 2; ctx.beginPath();
+          data.forEach((v,i) => { if (i === 0) ctx.moveTo(X(i),Y(v)); else ctx.lineTo(X(i),Y(v)); });
+          ctx.stroke();
+          data.forEach((v,i) => {
+            ctx.fillStyle = '#4c6ef5'; ctx.beginPath(); ctx.arc(X(i),Y(v),3.2,0,Math.PI*2); ctx.fill();
+            txt(clipLabel(labels[i], 60), X(i), py+plotH+14, '#666', 'center', 'top');
+          });
+        }
+      } else if (type === 'hbar') {
+        const vmax = niceMax(Math.max(...data, 0)), n = data.length, slot = plotH/n, bh = Math.min(24, slot*0.6), steps = 4;
+        for (let i = 0; i <= steps; i++) {
+          const xx = px + plotW*i/steps;
+          ctx.strokeStyle = '#f3f3f3'; ctx.beginPath(); ctx.moveTo(xx,py); ctx.lineTo(xx,py+plotH); ctx.stroke();
+          txt(Math.round(vmax*i/steps), xx, py+plotH+12, '#888', 'center', 'top');
+        }
+        data.forEach((v,i) => {
+          const cyp = py + slot*i + slot/2, bw = plotH ? plotW*v/vmax : 0;
+          ctx.fillStyle = CHART_COLORS[i%CHART_COLORS.length];
+          ctx.fillRect(px, cyp-bh/2, bw, bh);
+          txt(clipLabel(labels[i], padL-8), px-6, cyp, '#555', 'right');
+        });
+      } else if (type === 'pie') {
+        const total = data.reduce((a,b) => a+(b > 0 ? b : 0), 0);
+        const cxp = px + plotW*0.32, cyp = py + plotH/2, rad = Math.min(plotW*0.3, plotH*0.46);
+        let ang = -Math.PI/2;
+        data.forEach((v,i) => {
+          if (v <= 0) return;
+          const a2 = ang + (total ? v/total : 0)*Math.PI*2;
+          ctx.beginPath(); ctx.moveTo(cxp,cyp); ctx.arc(cxp,cyp,rad,ang,a2); ctx.closePath();
+          ctx.fillStyle = CHART_COLORS[i%CHART_COLORS.length]; ctx.fill();
+          ang = a2;
+        });
+        const legX = px + plotW*0.64, legY = py + 10;
+        data.forEach((v,i) => {
+          const yy = legY + i*20;
+          ctx.fillStyle = CHART_COLORS[i%CHART_COLORS.length]; ctx.fillRect(legX, yy-6, 11, 11);
+          const pct = total ? Math.round(v/total*100) : 0;
+          txt(clipLabel(labels[i], 120)+' ('+pct+'%)', legX+16, yy, '#555', 'left');
+        });
+      } else {
+        const items = data.map((v,i) => ({v:Math.max(v,0), label:labels[i], color:CHART_COLORS[i%CHART_COLORS.length]}))
+                         .filter(d => d.v > 0).sort((a,b) => b.v-a.v);
+        const total = items.reduce((a,b) => a+b.v, 0) || 1;
+        const R = { x:px, y:py, w:plotW, h:plotH };
+        squarify(items, total).forEach(r => {
+          const X = R.x + r.x*R.w, Y = R.y + r.y*R.h, W = r.w*R.w, H = r.h*R.h;
+          ctx.fillStyle = r.color; ctx.fillRect(X,Y,W,H);
+          ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.strokeRect(X,Y,W,H);
+          if (W > 36 && H > 22) {
+            ctx.fillStyle = '#fff'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+            ctx.fillText(clipLabel(r.label, W-10), X+5, Y+4);
+            ctx.fillText(String(Math.round(r.v)), X+5, Y+19);
+          }
+        });
+      }
+    };
+    watch([showViz, vizChartType, vizValueCol], () => { if (showViz.value) nextTick(drawVizChart); });
+    watch(viz, () => { if (showViz.value) nextTick(drawVizChart); }, { deep: true });
+    watch(vizNumericCols, (arr) => { if (arr.length && arr.indexOf(Number(vizValueCol.value)) < 0) vizValueCol.value = arr[0]; });
+
     const onKeyDown = (e) => {
       // 录制快捷键时，由捕获阶段的 onCaptureKey 处理，这里不参与
       if (recordingAction.value) return;
@@ -2749,7 +3180,11 @@ createApp({
       selectAllNodes, nudgeSelection, openMoreMenu,
       ctxEdit, ctxAddChild, ctxAddSibling, ctxTag, ctxConnect, ctxReset, ctxDelete,
       ctxSelectAll, ctxNewRoot, ctxFit, ctxDark, ctxExport, ctxManager,
-      askConfirm, doConfirm, showHelp
+      ctxCopyNode, ctxCutNode, ctxPasteNode, copySelectedNodes, pasteClipboardNodes, startResizeNote,
+      askConfirm, doConfirm, showHelp,
+      showMdImport, mdImportText, mdImportMode, openMdImport, applyMdImport, ctxMdImport,
+      showViz, vizChartType, vizValueCol, viz, vizNumericCols, vizStats,
+      onVizCell, vizAddRow, vizAddCol, vizDelRow, vizDelLastCol, openViz, ctxViz
     };
   }
 }).mount('#app');
