@@ -425,8 +425,8 @@ body.dark .ctx-head { color:#888; }
   -webkit-text-decoration-color:currentColor; text-decoration-color:currentColor;
 }
 .gloss-word.b { font-weight:800; }
-.gloss-word.u { text-decoration:underline; text-decoration-thickness:2px; text-underline-offset:2px; }
-.gloss-word.bu { font-weight:800; text-decoration:underline; text-decoration-thickness:2px; text-underline-offset:2px; }
+.gloss-word.u { text-decoration:underline; text-decoration-thickness:2px; text-underline-offset:2px; text-decoration-skip-ink:none; -webkit-text-decoration-skip:none; }
+.gloss-word.bu { font-weight:800; text-decoration:underline; text-decoration-thickness:2px; text-underline-offset:2px; text-decoration-skip-ink:none; -webkit-text-decoration-skip:none; }
 .gloss-word .gw-tip {
   position:absolute; bottom:calc(100% + 9px); left:50%;
   transform:translateX(-50%) translateY(4px);
@@ -481,6 +481,36 @@ body.dark .gloss-style button.on { background:#1a7f5a; color:#fff; border-color:
 .free-note:hover .note-resize { opacity:.85; }
 .free-note.selected .note-resize { opacity:1; }
 @media (hover:none){ .note-resize { display:none; } }
+/* 解释开关 */
+.menu-item.switch-item { justify-content:space-between; cursor:pointer; }
+.switch { width:40px; height:22px; border-radius:11px; background:#c7ccd4; position:relative; transition:background .15s; flex:none; }
+.switch .knob { position:absolute; top:2px; left:2px; width:18px; height:18px; border-radius:50%; background:#fff; transition:left .15s; box-shadow:0 1px 3px rgba(0,0,0,.3); }
+.switch.on { background:#1a7f5a; }
+.switch.on .knob { left:20px; }
+body.no-explain .gloss-word { text-decoration:none !important; border-bottom:none !important; font-weight:inherit; cursor:default; }
+body.no-explain .gloss-word .gw-tip { display:none !important; }
+/* 画布图片 */
+.canvas-image { position:absolute; z-index:5; border:1.5px solid transparent; border-radius:8px; box-sizing:border-box; cursor:grab; }
+.canvas-image img { width:100%; height:100%; display:block; border-radius:6px; pointer-events:none; -webkit-user-drag:none; }
+.canvas-image.selected { border-color:#1a7f5a; box-shadow:0 0 0 2px rgba(26,127,90,.35); }
+.img-resize { position:absolute; right:-2px; bottom:-2px; width:13px; height:13px; cursor:nwse-resize; opacity:0; transition:opacity .12s; z-index:7;
+  background:linear-gradient(135deg, transparent 50%, rgba(26,127,90,.4) 50%, rgba(26,127,90,.7) 100%); border-bottom-right-radius:8px; }
+.canvas-image:hover .img-resize { opacity:.85; }
+.canvas-image.selected .img-resize { opacity:1; }
+/* 画布图表 */
+.canvas-chart { position:absolute; z-index:7; background:#fff; border:1.5px solid #d7dce3; border-radius:8px; box-shadow:0 3px 12px rgba(0,0,0,.12); overflow:hidden; cursor:grab; display:flex; flex-direction:column; }
+.canvas-chart.selected { border-color:#1a7f5a; box-shadow:0 0 0 2px rgba(26,127,90,.35), 0 3px 12px rgba(0,0,0,.12); }
+.cc-head { display:flex; align-items:center; justify-content:space-between; gap:6px; padding:4px 6px; background:#f5f6f8; border-bottom:1px solid #e5e8ed; cursor:default; }
+.cc-head select { font-size:11px; padding:2px 4px; border:1px solid #d0d5dc; border-radius:5px; font-family:inherit; background:#fff; }
+.cc-edit { font-size:11px; padding:2px 8px; border:1px solid #d0d5dc; border-radius:5px; background:#fff; cursor:pointer; }
+.cc-canvas { flex:1; width:100%; min-height:0; display:block; }
+.chart-resize { position:absolute; right:-1px; bottom:-1px; width:13px; height:13px; cursor:nwse-resize; opacity:0; transition:opacity .12s; z-index:7;
+  background:linear-gradient(135deg, transparent 50%, rgba(26,127,90,.4) 50%, rgba(26,127,90,.7) 100%); border-bottom-right-radius:8px; }
+.canvas-chart:hover .chart-resize { opacity:.85; }
+.canvas-chart.selected .chart-resize { opacity:1; }
+body.dark .canvas-chart { background:#2b2b30; border-color:#4a4d55; }
+body.dark .cc-head { background:#34363c; border-color:#45484f; }
+body.dark .cc-head select, body.dark .cc-edit { background:#2b2b30; color:#e6e6ea; border-color:#4a4d55; }
 .viz-mode-row { display:flex; gap:18px; margin-top:10px; font-size:13px; }
 .viz-mode-row label { display:flex; align-items:center; gap:5px; cursor:pointer; }
 .viz-modal { width:min(900px,94vw); }
@@ -588,6 +618,7 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
     <button class="icon-btn" @click="toggleDark" :title="darkMode?'切换日间模式（D）':'切换夜间模式（D）'">{{ darkMode ? '☀️' : '🌙' }}</button>
     <button class="icon-btn" @click="fitView" title="适应窗口（F / Ctrl+0）">⛶</button>
     <span class="zoom">{{ Math.round(view.scale*100) }}%</span>
+    <button class="icon-btn settings-gear" @click="openMoreMenu" title="设置（M）">⚙</button>
   </div>
 
   <div class="connect-hint" v-if="connectingFrom !== null">🔗 连接模式：点击目标节点建立连接，点空白取消</div>
@@ -621,6 +652,32 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
         </g>
         </template>
       </svg>
+      <div v-for="ch in freeCharts" :key="'fc'+ch.id"
+           class="canvas-chart" :class="{selected:ch.id===selectedChartId}"
+           :style="{left:ch.x+'px', top:ch.y+'px', width:ch.w+'px', height:ch.h+'px'}"
+           @mousedown.stop="onChartMouseDown(ch,$event)"
+           @dblclick.stop="onChartDblClick(ch)"
+           @contextmenu.stop.prevent="onChartContextMenu(ch,$event)">
+        <div class="cc-head" @mousedown.stop @click.stop>
+          <select :value="ch.chartType" @change.stop="setWidgetType(ch,$event.target.value)">
+            <option value="bar">柱状</option><option value="hbar">条形</option>
+            <option value="pie">饼图</option><option value="line">折线</option>
+            <option value="treemap">矩形树</option>
+          </select>
+          <button class="cc-edit" @click.stop="openChartDataEditor(ch)">✎ 数据</button>
+        </div>
+        <canvas class="cc-canvas" :ref="el=>setChartCanvas(ch.id,el)"></canvas>
+        <span class="chart-resize" title="拖动调整大小" @mousedown.stop="startResizeChart(ch,$event)"></span>
+      </div>
+      <div v-for="im in freeImages" :key="'fi'+im.id"
+           class="canvas-image" :class="{selected:im.id===selectedImageId}"
+           :style="{left:im.x+'px', top:im.y+'px', width:im.w+'px', height:im.h+'px'}"
+           @mousedown.stop="onImageMouseDown(im,$event)"
+           @contextmenu.stop.prevent="onImageContextMenu(im,$event)">
+        <span v-if="im.seq" class="seq-badge">{{ im.seq.no }}<span class="gw-tip">{{ im.seq.text }}</span></span>
+        <img :src="im.src" draggable="false" alt="">
+        <span class="img-resize" title="拖动调整大小" @mousedown.stop="startResizeImage(im,$event)"></span>
+      </div>
       <div v-for="nt in freeNotes" :key="'fn'+nt.id"
            class="free-note" :class="{selected:nt.id===selectedNoteId, editing:nt.id===editingNoteId}"
            :style="{left:nt.x+'px', top:nt.y+'px', width:nt.w+'px', height:nt.h+'px'}"
@@ -673,7 +730,6 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
     <button class="tool-btn danger" :disabled="!selectedId" title="删除选中节点（Delete）" @click="deleteNode"><span class="ico">✕</span>删除<span class="kbd">Del</span></button>
     <button class="tool-btn warn" :disabled="!selectedId" title="编辑标签（T）" @click="openTagEditor"><span class="ico">🏷</span>标签<span class="kbd">T</span></button>
     <button class="tool-btn warn" :disabled="!selectedId" title="连接到另一节点（L）" @click="startConnect"><span class="ico">🔗</span>连接<span class="kbd">L</span></button>
-    <button class="tool-btn" title="更多操作（M）" @click="openMoreMenu"><span class="ico">⋯</span>更多<span class="kbd">M</span></button>
   </div>
 
   <!-- 编辑文字 -->
@@ -702,9 +758,13 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
   <!-- 更多菜单 -->
   <div class="modal-mask" :class="{show:showMenu}" @click.self="showMenu=false">
     <div class="modal">
-      <div class="modal-header"><span>更多操作</span><button class="close" @click="showMenu=false">×</button></div>
+      <div class="modal-header"><span>设置</span><button class="close" @click="showMenu=false">×</button></div>
       <div class="modal-body">
         <div class="menu-list">
+          <div class="menu-item switch-item" @click="toggleExplain">
+            <span><span class="ico">💡</span>解释显示（词汇标注 / 序号提示）</span>
+            <span class="switch" :class="{on:showExplain}"><span class="knob"></span></span>
+          </div>
           <div class="menu-item" @click="openEdit"><span class="ico">✎</span>编辑节点文字</div>
           <div class="menu-item" @click="resetNodePosition"><span class="ico">⟲</span>重置节点位置</div>
           <div class="menu-item" @click="openConnManager"><span class="ico">🔗</span>管理连接<span class="badge" v-if="currentMap && currentMap.connections.length">{{ currentMap.connections.length }}</span></div>
@@ -820,7 +880,10 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
         </div>
         <canvas ref="vizCanvas" class="viz-canvas"></canvas>
       </div>
-      <div class="modal-footer"><button class="solid" @click="showViz=false">完成</button></div>
+      <div class="modal-footer">
+        <button class="solid" v-if="chartBindTarget" @click="applyVizToChart">保存到画布图表</button>
+        <button class="solid" @click="showViz=false">完成</button>
+      </div>
     </div>
   </div>
 
@@ -1026,11 +1089,27 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
       <div class="ctx-sep"></div>
       <div class="ctx-item danger" @click="ctxNoteDelete"><span class="ci-ico">✕</span><span class="ci-label">删除文本框</span><span class="kbd2">Del</span></div>
     </template>
+    <template v-else-if="ctxMenu.type==='image'">
+      <div class="ctx-head">{{ ctxMenu.nodeText }}</div>
+      <div class="ctx-item" @click="ctxConnect"><span class="ci-ico">🔗</span><span class="ci-label">从此连接</span><span class="kbd2">L</span></div>
+      <div class="ctx-item" @click="ctxImageSeq"><span class="ci-ico">①</span><span class="ci-label">序号注释</span></div>
+      <div class="ctx-sep"></div>
+      <div class="ctx-item danger" @click="ctxImageDelete"><span class="ci-ico">✕</span><span class="ci-label">删除图片</span><span class="kbd2">Del</span></div>
+    </template>
+    <template v-else-if="ctxMenu.type==='chart'">
+      <div class="ctx-head">📊 图表</div>
+      <div class="ctx-item" @click="ctxConnect"><span class="ci-ico">🔗</span><span class="ci-label">从此连接</span><span class="kbd2">L</span></div>
+      <div class="ctx-item" @click="ctxChartData"><span class="ci-ico">✎</span><span class="ci-label">编辑数据</span></div>
+      <div class="ctx-sep"></div>
+      <div class="ctx-item danger" @click="ctxChartDelete"><span class="ci-ico">✕</span><span class="ci-label">删除图表</span><span class="kbd2">Del</span></div>
+    </template>
     <template v-else>
       <div class="ctx-item" @click="ctxPasteNode"><span class="ci-ico">📋</span><span class="ci-label">在此粘贴节点</span><span class="kbd2">Ctrl+V</span></div>
       <div class="ctx-item" @click="ctxSelectAll"><span class="ci-ico">▣</span><span class="ci-label">全选节点</span><span class="kbd2">Ctrl+A</span></div>
       <div class="ctx-item" @click="ctxNewRoot"><span class="ci-ico">🌱</span><span class="ci-label">新建导图分支</span><span class="kbd2">Alt+N</span></div>
       <div class="ctx-item" @click="ctxEnterText"><span class="ci-ico">📝</span><span class="ci-label">添加文本（拖选区域）</span></div>
+      <div class="ctx-item" @click="ctxInsertImage"><span class="ci-ico">🖼</span><span class="ci-label">插入图片（在右键位置）</span></div>
+      <div class="ctx-item" @click="ctxAddChartWidget"><span class="ci-ico">📊</span><span class="ci-label">添加可视化图表（在右键位置）</span></div>
       <div class="ctx-item" @click="ctxMdImport"><span class="ci-ico">📥</span><span class="ci-label">Markdown 转导图</span></div>
       <div class="ctx-item" @click="ctxViz"><span class="ci-ico">📊</span><span class="ci-label">表格 / 可视化图表</span></div>
       <div class="ctx-item" @click="ctxRenameCurrent"><span class="ci-ico">✏️</span><span class="ci-label">重命名本导图</span></div>
@@ -1043,6 +1122,7 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
     </template>
   </div>
 
+  <input ref="imgFileEl" type="file" accept="image/*" style="display:none" @change="onImageFileChosen">
   <div class="toast" :class="{show:toastMsg}">{{ toastMsg }}</div>
 </div>
 
@@ -1092,9 +1172,15 @@ createApp({
     let connId = 1;
     let mapId = 1;
     let noteSeq = 1;   // 自由文本框 id 计数
+    let imageSeq = 1;  // 图片 id 计数
+    let chartSeq = 1;  // 图表 id 计数
     const makeNode = (text, children, tags) => ({ id: nextId++, text, children: children || [], tags: tags || [], marks: [], textColor: null, seq: null, offsetX: 0, offsetY: 0 });
     const makeNote = (x, y, w, h, text) => ({ id: noteSeq++, x, y, w, h, text: text || '', seq: null });
-    const makeMap = (name, roots) => ({ id: 'map_' + (mapId++), name: name || '未命名导图', roots: roots || [], connections: [], notes: [], createdAt: Date.now(), updatedAt: Date.now() });
+    const makeMap = (name, roots) => ({ id: 'map_' + (mapId++), name: name || '未命名导图', roots: roots || [], connections: [], notes: [], images: [], charts: [], createdAt: Date.now(), updatedAt: Date.now() });
+    const makeImage = (x, y, w, h, src, name) => ({ id: imageSeq++, x, y, w, h, src, name: name || '图片', seq: null });
+    const makeChart = (x, y) => ({ id: chartSeq++, x, y, w: 320, h: 240, chartType: 'bar',
+      cols: [ {name:'类别'}, {name:'数值'} ],
+      rows: [ ['A',120], ['B',200], ['C',150], ['D',260] ], seq: null });
 
     // 序号注释结构清洗：{no:Number, text:String} 合法则保留，否则 null
     const cleanSeq = (s) => {
@@ -1160,6 +1246,23 @@ createApp({
                   text: typeof nt.text === 'string' ? nt.text : '',
                   seq: cleanSeq(nt.seq)
                 };
+              });
+              // 图片 / 图表兼容
+              if (!Array.isArray(m.images)) m.images = [];
+              m.images = m.images.filter(im => im && im.src && Number.isFinite(im.x)).map(im => {
+                if (im.id >= imageSeq) imageSeq = im.id + 1;
+                return { id: im.id, x: Number(im.x)||0, y: Number(im.y)||0,
+                  w: Math.max(40, Number(im.w)||200), h: Math.max(40, Number(im.h)||150),
+                  src: im.src, name: im.name || '图片', seq: cleanSeq(im.seq) };
+              });
+              if (!Array.isArray(m.charts)) m.charts = [];
+              m.charts = m.charts.filter(ch => ch && Array.isArray(ch.cols) && Array.isArray(ch.rows)).map(ch => {
+                if (ch.id >= chartSeq) chartSeq = ch.id + 1;
+                return { id: ch.id, x: Number(ch.x)||0, y: Number(ch.y)||0,
+                  w: Math.max(160, Number(ch.w)||320), h: Math.max(140, Number(ch.h)||240),
+                  chartType: ['bar','hbar','pie','line','treemap'].indexOf(ch.chartType) >= 0 ? ch.chartType : 'bar',
+                  cols: ch.cols.map(c => ({ name: String(c && c.name ? c.name : '列') })),
+                  rows: ch.rows.map(r => r.slice()), seq: cleanSeq(ch.seq) };
               });
               const mid = parseInt((m.id || '').replace('map_', ''));
               if (mid >= mapId) mapId = mid + 1;
@@ -1275,7 +1378,7 @@ createApp({
     const marquee = reactive({ show:false, x:0, y:0, w:0, h:0 });
     const marqueeHitIds = ref([]);               // 框选过程中实时命中的节点
     const isInMarquee = (id) => marqueeHitIds.value.indexOf(id) >= 0;
-    const ctxMenu = reactive({ show:false, x:0, y:0, type:'canvas', nodeId:null, noteId:null, nodeText:'' });
+    const ctxMenu = reactive({ show:false, x:0, y:0, type:'canvas', nodeId:null, noteId:null, nodeText:'', wx:0, wy:0 });
     const spaceDown = ref(false);
     const isPanning = ref(false);
     // 左键工具模式：'select'=空白框选节点（默认）；'pan'=左键直接拖动画布；'text'=空白拖出矩形添加自由文本
@@ -1296,10 +1399,51 @@ createApp({
     // 自由文本框
     const freeNotes = computed(() => currentMap.value ? (currentMap.value.notes || []) : []);
     const selectedNoteId = ref(null);
+    const selectedImageId = ref(null);
+    const selectedChartId = ref(null);
     const editingNoteId = ref(null);
     const noteEditText = ref('');
     const noteEditEl = ref(null);
     const findNote = (id) => freeNotes.value.find(n => n.id === id) || null;
+    // ===== 统一连接目标：节点(number) / 便签 n_ / 图片 i_ / 图表 c_ =====
+    const findImage = (id) => { const arr = currentMap.value ? (currentMap.value.images||[]) : []; return arr.find(x=>x.id===id) || null; };
+    const findChart = (id) => { const arr = currentMap.value ? (currentMap.value.charts||[]) : []; return arr.find(x=>x.id===id) || null; };
+    const targetKind = (ref) => { if (typeof ref === 'number') return 'node'; if (typeof ref === 'string' && ref.indexOf('_')>0) return ref.slice(0, ref.indexOf('_')); return null; };
+    const boxCenter = (o) => o ? { cx:o.x+o.w/2, cy:o.y+o.h/2 } : null;
+    const targetCenter = (ref) => {
+      const kd = targetKind(ref);
+      if (kd === 'node') return nodePosMap.value.get(ref);
+      const id = Number(ref.slice(ref.indexOf('_')+1));
+      if (kd === 'n') return boxCenter(findNote(id));
+      if (kd === 'i') return boxCenter(findImage(id));
+      if (kd === 'c') return boxCenter(findChart(id));
+      return null;
+    };
+    const targetEdgeR = (ref) => {
+      const kd = targetKind(ref);
+      if (kd === 'node') return NW/2 + 8;
+      const id = Number(ref.slice(ref.indexOf('_')+1));
+      let o = null;
+      if (kd === 'n') o = findNote(id); else if (kd === 'i') o = findImage(id); else if (kd === 'c') o = findChart(id);
+      return o ? Math.min(o.w,o.h)/2 + 6 : 20;
+    };
+    const targetText = (ref) => {
+      const kd = targetKind(ref);
+      if (kd === 'node') { const n = findNode(ref); return n ? n.text : '?'; }
+      const id = Number(ref.slice(ref.indexOf('_')+1));
+      if (kd === 'n') { const n = findNote(id); return '文本' + (n && n.text ? '「'+n.text.slice(0,8)+'」' : ''); }
+      if (kd === 'i') { const n = findImage(id); return '🖼 ' + (n ? n.name : '图片'); }
+      if (kd === 'c') { return '📊 图表'; }
+      return '?';
+    };
+    const sameRef = (a,b) => String(a) === String(b);
+    const currentSelectedRef = () => {
+      if (selectedId.value != null) return selectedId.value;
+      if (selectedNoteId.value != null) return 'n_' + selectedNoteId.value;
+      if (selectedImageId.value != null) return 'i_' + selectedImageId.value;
+      if (selectedChartId.value != null) return 'c_' + selectedChartId.value;
+      return null;
+    };
     // 屏幕坐标 -> 画布坐标（统一换算，修复缩放/平移后鼠标与节点错位）
     const clientToCanvas = (clientX, clientY) => {
       const wrap = wrapRef.value;
@@ -1311,7 +1455,7 @@ createApp({
       };
     };
     const setSingleSelection = (id) => { selectedId.value = id; selectedIds.value = id ? [id] : []; };
-    const clearSelection = () => { selectedId.value = null; selectedIds.value = []; activeTag.value = null; selectedNoteId.value = null; };
+    const clearSelection = () => { selectedId.value = null; selectedIds.value = []; activeTag.value = null; selectedNoteId.value = null; selectedImageId.value = null; selectedChartId.value = null; };
 
     const showMenu = ref(false);
     const showMapManager = ref(false);
@@ -1406,6 +1550,7 @@ createApp({
     const resetKeymap = () => { Object.keys(DEFAULT_KEYMAP).forEach(k => keymap[k] = DEFAULT_KEYMAP[k]); savePref(); toast('已恢复默认快捷键'); };
     const openShortcuts = () => { closeCtxMenu(); showMenu.value = false; showShortcuts.value = true; };
 
+    const showExplain = ref(true);
     const darkMode = ref(false);
     const loadPref = () => {
       try {
@@ -1413,6 +1558,7 @@ createApp({
         if (raw) {
           const p = JSON.parse(raw);
           if (p.darkMode) darkMode.value = true;
+          if (p.showExplain === false) showExplain.value = false;
           if (p.toolMode === 'pan' || p.toolMode === 'select') toolMode.value = p.toolMode;
           if (p.keymap && typeof p.keymap === 'object') {
             Object.keys(DEFAULT_KEYMAP).forEach(id => {
@@ -1425,10 +1571,16 @@ createApp({
       applyPref();
     };
     const savePref = () => {
-      try { localStorage.setItem(PREF_KEY, JSON.stringify({ darkMode: darkMode.value, toolMode: toolMode.value, keymap: { ...keymap } })); } catch(e) {}
+      try { localStorage.setItem(PREF_KEY, JSON.stringify({ darkMode: darkMode.value, showExplain: showExplain.value, toolMode: toolMode.value, keymap: { ...keymap } })); } catch(e) {}
     };
     const applyPref = () => {
       document.body.classList.toggle('dark', darkMode.value);
+      document.body.classList.toggle('no-explain', !showExplain.value);
+    };
+    const toggleExplain = () => {
+      showExplain.value = !showExplain.value;
+      applyPref(); savePref();
+      toast(showExplain.value ? '已开启解释显示' : '已关闭解释显示');
     };
     const toggleDark = () => {
       darkMode.value = !darkMode.value;
@@ -1624,9 +1776,8 @@ createApp({
     const connLines = computed(() => {
       const lines = [];
       if (!currentMap.value) return lines;
-      const pm = nodePosMap.value;
       currentMap.value.connections.forEach(c => {
-        const a = pm.get(c.from), b = pm.get(c.to);
+        const a = targetCenter(c.from), b = targetCenter(c.to);
         if (a && b) {
           const baseMx = (a.cx + b.cx) / 2;
           const baseMy = (a.cy + b.cy) / 2 - 40;
@@ -1638,9 +1789,8 @@ createApp({
             const dx = tx - sx, dy = ty - sy, len = Math.hypot(dx, dy) || 1;
             return [sx + dx / len * rad, sy + dy / len * rad];
           };
-          const ER = NW / 2 + 8;
-          const [ahx, ahy] = edgePt(a.cx, a.cy, cpx, cpy, ER);
-          const [bhx, bhy] = edgePt(b.cx, b.cy, cpx, cpy, ER);
+          const [ahx, ahy] = edgePt(a.cx, a.cy, cpx, cpy, targetEdgeR(c.from));
+          const [bhx, bhy] = edgePt(b.cx, b.cy, cpx, cpy, targetEdgeR(c.to));
           lines.push({
             id: c.id, conn: c,
             ax:a.cx, ay:a.cy, bx:b.cx, by:b.cy, cpx, cpy, ahx, ahy, bhx, bhy,
@@ -1655,10 +1805,9 @@ createApp({
     const connNotes = computed(() => {
       const notes = [];
       if (!currentMap.value) return notes;
-      const pm = nodePosMap.value;
       currentMap.value.connections.forEach(c => {
         if (!c.note || !c.note.trim()) return;
-        const a = pm.get(c.from), b = pm.get(c.to);
+        const a = targetCenter(c.from), b = targetCenter(c.to);
         if (a && b) {
           const cpx = (a.cx+b.cx)/2 + ((c.cp&&c.cp.ox)||0);
           const cpy = (a.cy+b.cy)/2 - 40 + ((c.cp&&c.cp.oy)||0);
@@ -1694,10 +1843,7 @@ createApp({
 
     const connList = computed(() => {
       if (!currentMap.value) return [];
-      return currentMap.value.connections.map(c => {
-        const a = findNode(c.from), b = findNode(c.to);
-        return { id: c.id, fromText: a ? a.text : '?', toText: b ? b.text : '?', note: c.note || '' };
-      });
+      return currentMap.value.connections.map(c => ({ id: c.id, fromText: targetText(c.from), toText: targetText(c.to), note: c.note || '' }));
     });
 
     const canvasStyle = computed(() => ({
@@ -1903,6 +2049,7 @@ createApp({
     };
     const onNoteMouseDown = (note, e) => {
       if (e.button !== 0) return;
+      if (connectingFrom.value != null) { completeConnection('n_'+note.id); return; }
       if (editingNoteId.value === note.id) return;
       e.preventDefault(); e.stopPropagation();
       closeCtxMenu();
@@ -1932,6 +2079,182 @@ createApp({
     const ctxNoteDelete = () => { closeCtxMenu(); deleteSelectedNote(); };
     const ctxNoteSeq = () => { closeCtxMenu(); openSeqEditor('note', selectedNoteId.value); };
 
+    // ===== 图片（画布内）=====
+    const freeImages = computed(() => currentMap.value ? (currentMap.value.images||[]) : []);
+    const imgFileEl = ref(null);
+    let pendingImagePoint = null;
+    const onImageMouseDown = (im, e) => {
+      if (e.button !== 0) return;
+      if (connectingFrom.value != null) { completeConnection('i_'+im.id); return; }
+      e.preventDefault(); e.stopPropagation(); closeCtxMenu();
+      clearSelection(); selectedImageId.value = im.id; selectedConnId.value = null;
+      const sx=e.clientX, sy=e.clientY, ox=im.x, oy=im.y; let moved=false;
+      const onMove=(ev)=>{
+        const dx=(ev.clientX-sx)/view.scale, dy=(ev.clientY-sy)/view.scale;
+        if (Math.abs(ev.clientX-sx)>3 || Math.abs(ev.clientY-sy)>3) moved=true;
+        const r=findImage(im.id); if(r){r.x=ox+dx; r.y=oy+dy;}
+      };
+      const onUp=()=>{ if(moved)saveMaps(); window.removeEventListener('mousemove',onMove); window.removeEventListener('mouseup',onUp); };
+      window.addEventListener('mousemove',onMove); window.addEventListener('mouseup',onUp);
+    };
+    const startResizeImage = (li, e) => {
+      if (e.button !== 0) return;
+      const raw=findImage(li.id); if(!raw) return;
+      const sx=e.clientX, sy=e.clientY, sw=raw.w, sh=raw.h;
+      const onMove=(ev)=>{
+        let w=Math.round(sw+(ev.clientX-sx)/view.scale), h=Math.round(sh+(ev.clientY-sy)/view.scale);
+        raw.w=Math.min(2000,Math.max(40,w)); raw.h=Math.min(2000,Math.max(40,h));
+      };
+      const onUp=()=>{ window.removeEventListener('mousemove',onMove); window.removeEventListener('mouseup',onUp); saveMaps(); };
+      window.addEventListener('mousemove',onMove); window.addEventListener('mouseup',onUp);
+    };
+    const onImageContextMenu = (im, e) => {
+      clearSelection(); selectedImageId.value=im.id; selectedConnId.value=null;
+      openCtxAt(e.clientX, e.clientY, 'image', null, im);
+    };
+    const deleteSelectedImage = () => {
+      if (selectedImageId.value == null) return false;
+      const ref='i_'+selectedImageId.value;
+      currentMap.value.images=currentMap.value.images.filter(x=>x.id!==selectedImageId.value);
+      currentMap.value.connections=currentMap.value.connections.filter(c=>!sameRef(c.from,ref)&&!sameRef(c.to,ref));
+      selectedImageId.value=null; saveMaps(); toast('已删除图片'); return true;
+    };
+    const ctxImageDelete = () => { closeCtxMenu(); deleteSelectedImage(); };
+    const ctxImageSeq = () => { closeCtxMenu(); openSeqEditor('image', selectedImageId.value); };
+    const ctxInsertImage = () => {
+      closeCtxMenu();
+      pendingImagePoint = { x: ctxMenu.wx, y: ctxMenu.wy };
+      nextTick(()=>{ if(imgFileEl.value) imgFileEl.value.click(); });
+    };
+    const onImageFileChosen = (e) => {
+      const f = e.target.files && e.target.files[0];
+      if (!f) return;
+      const rd = new FileReader();
+      rd.onload = () => {
+        const dataUrl = rd.result;
+        const im = new Image();
+        im.onload = () => {
+          let w=im.width, h=im.height; const mx=360;
+          if (w>mx){ h=Math.round(h*mx/w); w=mx; }
+          const px = pendingImagePoint ? pendingImagePoint.x : 120;
+          const py = pendingImagePoint ? pendingImagePoint.y : 120;
+          currentMap.value.images.push(makeImage(px,py,Math.round(w),Math.round(h),dataUrl,f.name));
+          saveMaps(); toast('已插入图片'); pendingImagePoint=null;
+        };
+        im.src = dataUrl;
+      };
+      rd.readAsDataURL(f);
+      e.target.value='';
+    };
+
+    // ===== 画布内嵌可视化图表 =====
+    const WIDGET_FONT = '"Microsoft YaHei","PingFang SC",sans-serif';
+    const freeCharts = computed(() => currentMap.value ? (currentMap.value.charts||[]) : []);
+    const chartCanvasMap = new Map();
+    const setChartCanvas = (id, el) => {
+      if (el) { chartCanvasMap.set(id, el); nextTick(()=>drawWidget(id)); }
+      else chartCanvasMap.delete(id);
+    };
+    const compactDraw = (ctx, W, H, type, labels, data) => {
+      const padL=38,padR=8,padT=8,padB=26;
+      const pw=W-padL-padR, ph=H-padT-padB, px=padL, py=padT, n=data.length;
+      const setF=()=>{ctx.font='10px '+WIDGET_FONT;};
+      const txt=(s,x,y,col,al,bs)=>{setF();ctx.fillStyle=col||'#666';ctx.textAlign=al||'left';ctx.textBaseline=bs||'middle';ctx.fillText(String(s),x,y);};
+      const clip=(s,mw)=>{setF();if(ctx.measureText(s).width<=mw)return s;let o=s;while(o.length>1&&ctx.measureText(o+'…').width>mw)o=o.slice(0,-1);return o+'…';};
+      if(type==='bar'||type==='line'){
+        const vmax=niceMax(Math.max(...data,0));
+        for(let i=0;i<=4;i++){const yy=py+ph-ph*i/4;ctx.strokeStyle='#eee';ctx.beginPath();ctx.moveTo(px,yy);ctx.lineTo(px+pw,yy);ctx.stroke();txt(Math.round(vmax*i/4),px-4,yy,'#999','right');}
+        if(type==='bar'){const slot=pw/n,bw=Math.min(30,slot*0.6);
+          data.forEach((v,i)=>{const cxp=px+slot*i+slot/2,bh=ph*v/vmax;ctx.fillStyle=CHART_COLORS[i%CHART_COLORS.length];ctx.fillRect(cxp-bw/2,py+ph-bh,bw,bh);txt(clip(labels[i],slot-2),cxp,py+ph+9,'#777','center','top');});
+        }else{
+          const X=i=>px+(n<=1?pw/2:pw*i/(n-1)),Y=v=>py+ph-ph*v/vmax;
+          ctx.strokeStyle='#4c6ef5';ctx.lineWidth=2;ctx.beginPath();
+          data.forEach((v,i)=>{if(i===0)ctx.moveTo(X(i),Y(v));else ctx.lineTo(X(i),Y(v));});ctx.stroke();
+          data.forEach((v,i)=>{ctx.fillStyle='#4c6ef5';ctx.beginPath();ctx.arc(X(i),Y(v),2.4,0,Math.PI*2);ctx.fill();txt(clip(labels[i],40),X(i),py+ph+9,'#777','center','top');});
+        }
+      } else if(type==='hbar'){
+        const vmax=niceMax(Math.max(...data,0)),slot=ph/n,bh=Math.min(16,slot*0.6);
+        for(let i=0;i<=3;i++){const xx=px+pw*i/3;ctx.strokeStyle='#f3f3f3';ctx.beginPath();ctx.moveTo(xx,py);ctx.lineTo(xx,py+ph);ctx.stroke();txt(Math.round(vmax*i/3),xx,py+ph+8,'#999','center','top');}
+        data.forEach((v,i)=>{const cyp=py+slot*i+slot/2,bw=pw*v/vmax;ctx.fillStyle=CHART_COLORS[i%CHART_COLORS.length];ctx.fillRect(px,cyp-bh/2,bw,bh);txt(clip(labels[i],padL-6),px-4,cyp,'#666','right');});
+      } else if(type==='pie'){
+        const total=data.reduce((a,b)=>a+(b>0?b:0),0),cxp=px+pw*0.3,cyp=py+ph/2,rad=Math.min(pw*0.28,ph*0.44);let ang=-Math.PI/2;
+        data.forEach((v,i)=>{if(v<=0)return;const a2=ang+(total?v/total:0)*Math.PI*2;ctx.beginPath();ctx.moveTo(cxp,cyp);ctx.arc(cxp,cyp,rad,ang,a2);ctx.closePath();ctx.fillStyle=CHART_COLORS[i%CHART_COLORS.length];ctx.fill();ang=a2;});
+        const lx=px+pw*0.62,ly=py+6;
+        data.forEach((v,i)=>{const yy=ly+i*15;ctx.fillStyle=CHART_COLORS[i%CHART_COLORS.length];ctx.fillRect(lx,yy-5,9,9);txt(clip(labels[i],pw*0.36),lx+13,yy,'#666','left');});
+      } else {
+        const items=data.map((v,i)=>({v:Math.max(v,0),label:labels[i],color:CHART_COLORS[i%CHART_COLORS.length]})).filter(d=>d.v>0).sort((a,b)=>b.v-a.v);
+        const total=items.reduce((a,b)=>a+b.v,0)||1,R={x:px,y:py,w:pw,h:ph};
+        squarify(items,total).forEach(r=>{const X=R.x+r.x*R.w,Y=R.y+r.y*R.h,W=r.w*R.w,H=r.h*R.h;
+          ctx.fillStyle=r.color;ctx.fillRect(X,Y,W,H);ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.strokeRect(X,Y,W,H);
+          if(W>26&&H>16){ctx.fillStyle='#fff';ctx.textAlign='left';ctx.textBaseline='top';ctx.font='9px '+WIDGET_FONT;ctx.fillText(clip(r.label,W-4),X+3,Y+2);}});
+      }
+    };
+    const drawWidget=(id)=>{
+      const ch=findChart(id),cv=chartCanvasMap.get(id);
+      if(!ch||!cv)return;
+      const dpr=window.devicePixelRatio||1;
+      const cw=cv.clientWidth,chh=cv.clientHeight;
+      if(!cw||!chh)return;
+      cv.width=Math.round(cw*dpr);cv.height=Math.round(chh*dpr);
+      const ctx=cv.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,cw,chh);
+      const labels=ch.rows.map(r=>String(r[0]==null?'':r[0]));
+      let vi=1;for(let ci=1;ci<ch.cols.length;ci++){if(ch.rows.some(r=>isFinite(parseFloat(r[ci])))){vi=ci;break;}}
+      const data=ch.rows.map(r=>{const v=parseFloat(r[vi]);return isFinite(v)?v:0;});
+      compactDraw(ctx,cw,chh,ch.chartType,labels,data);
+    };
+    const onChartMouseDown=(ch,e)=>{
+      if(e.button!==0)return;
+      if(connectingFrom.value!=null){completeConnection('c_'+ch.id);return;}
+      e.preventDefault();e.stopPropagation();closeCtxMenu();
+      clearSelection();selectedChartId.value=ch.id;selectedConnId.value=null;
+      const sx=e.clientX,sy=e.clientY,ox=ch.x,oy=ch.y;let moved=false;
+      const onMove=(ev)=>{const dx=(ev.clientX-sx)/view.scale,dy=(ev.clientY-sy)/view.scale;
+        if(Math.abs(ev.clientX-sx)>3||Math.abs(ev.clientY-sy)>3)moved=true;
+        const r=findChart(ch.id);if(r){r.x=ox+dx;r.y=oy+dy;}};
+      const onUp=()=>{if(moved)saveMaps();window.removeEventListener('mousemove',onMove);window.removeEventListener('mouseup',onUp);};
+      window.addEventListener('mousemove',onMove);window.addEventListener('mouseup',onUp);
+    };
+    const startResizeChart=(li,e)=>{
+      if(e.button!==0)return;const raw=findChart(li.id);if(!raw)return;
+      const sx=e.clientX,sy=e.clientY,sw=raw.w,sh=raw.h;
+      const onMove=(ev)=>{let w=Math.round(sw+(ev.clientX-sx)/view.scale),h=Math.round(sh+(ev.clientY-sy)/view.scale);
+        raw.w=Math.min(1200,Math.max(160,w));raw.h=Math.min(1000,Math.max(140,h));nextTick(()=>drawWidget(raw.id));};
+      const onUp=()=>{window.removeEventListener('mousemove',onMove);window.removeEventListener('mouseup',onUp);saveMaps();};
+      window.addEventListener('mousemove',onMove);window.addEventListener('mouseup',onUp);
+    };
+    const onChartContextMenu=(ch,e)=>{clearSelection();selectedChartId.value=ch.id;selectedConnId.value=null;openCtxAt(e.clientX,e.clientY,'chart',null,ch);};
+    const onChartDblClick=(ch)=>openChartDataEditor(ch);
+    const setWidgetType=(ch,v)=>{ch.chartType=v;saveMaps();nextTick(()=>drawWidget(ch.id));};
+    const deleteSelectedChart=()=>{
+      if(selectedChartId.value==null)return false;
+      const ref='c_'+selectedChartId.value;
+      currentMap.value.charts=currentMap.value.charts.filter(x=>x.id!==selectedChartId.value);
+      currentMap.value.connections=currentMap.value.connections.filter(c=>!sameRef(c.from,ref)&&!sameRef(c.to,ref));
+      selectedChartId.value=null;saveMaps();toast('已删除图表');return true;
+    };
+    const ctxChartDelete=()=>{closeCtxMenu();deleteSelectedChart();};
+    const ctxChartData=()=>{closeCtxMenu();const ch=findChart(selectedChartId.value);if(ch)openChartDataEditor(ch);};
+    const ctxAddChartWidget=()=>{
+      closeCtxMenu();
+      const ch=makeChart(ctxMenu.wx,ctxMenu.wy);
+      currentMap.value.charts.push(ch);saveMaps();
+      nextTick(()=>drawWidget(ch.id));toast('已添加图表，点「✎ 数据」改内容');
+    };
+    // 数据编辑：复用可视化弹窗，保存时写回画布图表
+    const chartBindTarget=ref(null);
+    const openChartDataEditor=(ch)=>{
+      chartBindTarget.value=ch;
+      viz.cols=ch.cols.map(c=>({name:c.name}));
+      viz.rows=ch.rows.map(r=>r.slice());
+      showViz.value=true;nextTick(drawVizChart);
+    };
+    const applyVizToChart=()=>{
+      if(chartBindTarget.value){const ch=findChart(chartBindTarget.value.id);
+        if(ch){ch.cols=viz.cols.map(c=>({name:c.name}));ch.rows=viz.rows.map(r=>r.slice());saveMaps();nextTick(()=>drawWidget(ch.id));toast('图表已更新');}}
+      chartBindTarget.value=null;showViz.value=false;
+    };
+    watch(currentMap,()=>nextTick(()=>{if(currentMap.value)currentMap.value.charts.forEach(c=>drawWidget(c.id));}),{immediate:true});
+
     // ===== 序号注释（节点 / 自由文本通用，编号 + 悬浮解释，导图内自动递增）=====
     const showSeq = ref(false);
     const seqTarget = ref(null);
@@ -1948,6 +2271,7 @@ createApp({
     const nextSeqNo = () => { let mx = 0; collectSeqList().forEach(s => { if (s.no > mx) mx = s.no; }); return mx + 1; };
     const getSeq = (kind, id) => {
       if (kind === 'note') { const n = findNote(id); return n ? n.seq : null; }
+      if (kind === 'image') { const n = findImage(id); return n ? n.seq : null; }
       const n = findNode(id); return n ? n.seq : null;
     };
     const openSeqEditor = (kind, id) => {
@@ -1965,12 +2289,14 @@ createApp({
       if (!text) { toast('请填写序号对应的解释'); return; }
       const data = { no: Number(seqNo.value) || nextSeqNo(), text };
       if (t.kind === 'note') { const n = findNote(t.id); if (n) n.seq = data; }
+      else if (t.kind === 'image') { const n = findImage(t.id); if (n) n.seq = data; }
       else { const n = findNode(t.id); if (n) n.seq = data; }
       saveMaps(); showSeq.value = false; toast('已添加序号 ' + data.no + ' 的解释');
     };
     const removeSeq = () => {
       const t = seqTarget.value; if (!t) return;
       if (t.kind === 'note') { const n = findNote(t.id); if (n) n.seq = null; }
+      else if (t.kind === 'image') { const n = findImage(t.id); if (n) n.seq = null; }
       else { const n = findNode(t.id); if (n) n.seq = null; }
       saveMaps(); showSeq.value = false; toast('已删除序号注释');
     };
@@ -2177,6 +2503,8 @@ createApp({
     const onCanvasContextMenu = (e) => {
       if (editing.value || editingTag.value || renamingMap.value || editingNoteId.value !== null) return;
       openCtxAt(e.clientX, e.clientY, 'canvas', null);
+      const wp = clientToCanvas(e.clientX, e.clientY);
+      ctxMenu.wx = wp.x; ctxMenu.wy = wp.y;
     };
     const ctxRenameCurrent = () => { closeCtxMenu(); if (currentMap.value) startRenameMap(currentMap.value.id); };
     const ctxEnterText = () => { closeCtxMenu(); setToolMode('text'); };
@@ -2431,9 +2759,20 @@ createApp({
 
     // 连接
     const startConnect = () => {
-      if (!selectedId.value) { toast('请先选中节点'); return; }
-      connectingFrom.value = connectingFrom.value === selectedId.value ? null : selectedId.value;
+      const ref = currentSelectedRef();
+      if (ref == null) { toast('请先选中节点、文本、图片或图表'); return; }
+      connectingFrom.value = (connectingFrom.value != null && sameRef(connectingFrom.value, ref)) ? null : ref;
       activeTag.value = null;
+    };
+    const completeConnection = (toRef) => {
+      const from = connectingFrom.value;
+      if (from == null) return;
+      if (sameRef(from, toRef)) { connectingFrom.value = null; return; }
+      const exists = currentMap.value.connections.some(c =>
+        (sameRef(c.from,from) && sameRef(c.to,toRef)) || (sameRef(c.to,from) && sameRef(c.from,toRef)));
+      if (exists) { toast('连接已存在'); }
+      else { currentMap.value.connections.push({ id: connId++, from, to: toRef, note:'', cp:{ox:0,oy:0} }); saveMaps(); toast('已创建连接'); }
+      connectingFrom.value = null;
     };
     const deleteConnection = (id) => {
       currentMap.value.connections = currentMap.value.connections.filter(c => c.id !== id);
@@ -2455,6 +2794,17 @@ createApp({
         if (px >= n.x && px <= n.x + NW && py >= n.y && py <= n.y + h) return n.id;
       }
       return null;
+    };
+    const inBox = (o, x, y) => x >= o.x && x <= o.x+o.w && y >= o.y && y <= o.y+o.h;
+    const pointHitTarget = (x, y) => {
+      const chs = currentMap.value.charts || [];
+      for (let i = chs.length-1; i >= 0; i--) if (inBox(chs[i],x,y)) return 'c_'+chs[i].id;
+      const ims = currentMap.value.images || [];
+      for (let i = ims.length-1; i >= 0; i--) if (inBox(ims[i],x,y)) return 'i_'+ims[i].id;
+      const nts = currentMap.value.notes || [];
+      for (let i = nts.length-1; i >= 0; i--) if (inBox(nts[i],x,y)) return 'n_'+nts[i].id;
+      const nid = pointHitNode(x,y);
+      return nid != null ? nid : null;
     };
     // 左键在线上按下：选中并直接拖拽其控制点，自由改变走线
     const onConnMouseDown = (c, e) => {
@@ -2499,15 +2849,20 @@ createApp({
       const onUp = (ev) => {
         window.removeEventListener('mouseup', onUp);
         const p = clientToCanvas(ev.clientX, ev.clientY);
-        const hit = pointHitNode(p.x, p.y);
+        const hit = pointHitTarget(p.x, p.y);
         if (hit != null) {
           const other = which === 'from' ? conn.to : conn.from;
-          if (hit === conn.from || hit === conn.to) { /* 落回原节点，不变 */ }
-          else if (hit === other) { toast('不能连接自身'); }
+          if (sameRef(hit,conn.from) || sameRef(hit,conn.to)) { /* 落回原目标，不变 */ }
+          else if (sameRef(hit,other)) { toast('不能连接自身'); }
           else {
-            const exists = currentMap.value.connections.some(x => x.id !== id &&
-              ((x.from === (which==='from'?hit:conn.from) && x.to === (which==='to'?hit:conn.to)) ||
-               (x.to === (which==='from'?hit:conn.from) && x.from === (which==='to'?hit:conn.to))));
+            const nf = which === 'from' ? hit : conn.from;
+            const nt = which === 'to' ? hit : conn.to;
+            const exists = currentMap.value.connections.some(x => {
+              if (x.id === id) return false;
+              const fwd = sameRef(x.from,nf) && sameRef(x.to,nt);
+              const rev = sameRef(x.to,nf) && sameRef(x.from,nt);
+              return fwd || rev;
+            });
             if (exists) toast('连接已存在');
             else { conn[which] = hit; conn.cp = { ox:0, oy:0 }; saveMaps(); toast('已重新连接'); }
           }
@@ -2938,7 +3293,7 @@ createApp({
     const vizDelRow = (ri) => { if (viz.rows.length <= 1) { toast('至少保留一行'); return; } viz.rows.splice(ri,1); };
     const vizDelCol = (ci) => { if (viz.cols.length <= 1) { toast('至少保留一列'); return; } viz.cols.splice(ci,1); viz.rows.forEach(r => r.splice(ci,1)); };
     const vizDelLastCol = () => vizDelCol(viz.cols.length - 1);
-    const openViz = () => { showMenu.value = false; showViz.value = true; nextTick(drawVizChart); };
+    const openViz = () => { chartBindTarget.value = null; showMenu.value = false; showViz.value = true; nextTick(drawVizChart); };
     const ctxViz = () => { closeCtxMenu(); openViz(); };
     const CHART_COLORS = ['#4c6ef5','#12b886','#f59f00','#e64980','#7048e8','#1c7ed6','#fab005','#fd7e14','#20c997','#cc5de8'];
     const niceMax = (v) => { if (!isFinite(v) || v <= 0) return 1; const p = Math.pow(10, Math.floor(Math.log10(v))); const n = v/p; const m = n<=1?1:n<=2?2:n<=2.5?2.5:n<=5?5:10; return m*p; };
@@ -3173,7 +3528,7 @@ createApp({
       onNodeTouchStart, onNodeTouchMove, onNodeTouchEnd, onNodeMouseDown, startResizeNode, onNodeClick, openEditFor,
       addChild, addSibling, deleteNode, openEdit, saveEdit, cancelEdit,
       openTagEditor, saveTag, cancelTag, toggleTagRelation,
-      startConnect, deleteConnection, updateConnNote, editConnNote, openConnManager,
+      startConnect, completeConnection, deleteConnection, updateConnNote, editConnNote, openConnManager,
       openExport, copyExport, generateImage, downloadImage,
       switchMap, newMap, deleteMap, startRenameMap, saveRenameMap, cancelRenameMap,
       newRootInCurrent, confirmClearCurrent, resetNodePosition, openMapManager,
@@ -3184,7 +3539,13 @@ createApp({
       askConfirm, doConfirm, showHelp,
       showMdImport, mdImportText, mdImportMode, openMdImport, applyMdImport, ctxMdImport,
       showViz, vizChartType, vizValueCol, viz, vizNumericCols, vizStats,
-      onVizCell, vizAddRow, vizAddCol, vizDelRow, vizDelLastCol, openViz, ctxViz
+      onVizCell, vizAddRow, vizAddCol, vizDelRow, vizDelLastCol, openViz, ctxViz,
+      showExplain, toggleExplain,
+      freeImages, selectedImageId, onImageMouseDown, startResizeImage, onImageContextMenu,
+      deleteSelectedImage, ctxImageDelete, ctxImageSeq, ctxInsertImage, imgFileEl, onImageFileChosen,
+      freeCharts, selectedChartId, setChartCanvas, onChartMouseDown, startResizeChart, onChartContextMenu,
+      onChartDblClick, setWidgetType, deleteSelectedChart, ctxChartDelete, ctxChartData, ctxAddChartWidget,
+      chartBindTarget, openChartDataEditor, applyVizToChart
     };
   }
 }).mount('#app');
