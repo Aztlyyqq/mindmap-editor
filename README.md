@@ -6,13 +6,13 @@
 
 不想自己打包的话，直接下载已构建好的绿色免安装包（托管在 GitHub Releases，永久有效）：
 
-### 👉 [点此下载：MindMapEditor-win32-x64.zip](https://github.com/Aztlyyqq/mindmap-editor/releases/download/v2.2.0/MindMapEditor-win32-x64.zip)
+### 👉 [点此下载：MindMapEditor-win32-x64.zip](https://github.com/Aztlyyqq/mindmap-editor/releases/download/v2.3.0/MindMapEditor-win32-x64.zip)
 
 - 适用：Windows 10 / 11（64 位），**无需安装、无需 Node 环境、完全离线**
 - 用法：下载后**解压整个 zip** → 进入 `MindMapEditor-win32-x64` 文件夹 → 双击其中的 **`MindMapEditor.exe`** 运行
 - 注意：请保持解压后的文件夹完整（exe 依赖同目录的 dll / resources 运行时，单独把 exe 拷出来会无法启动）
 - 未购买代码签名证书，首次运行 SmartScreen 可能提示“未知发布者”，选“更多信息 → 仍要运行”即可
-- 当前版本：**v2.2.0（2026-09-24）**，历次更新见 [Releases](https://github.com/Aztlyyqq/mindmap-editor/releases)
+- 当前版本：**v2.3.0（2026-09-25）**，历次更新见 [Releases](https://github.com/Aztlyyqq/mindmap-editor/releases)
 
 > 若直链较慢，可到本仓库 **Releases** 页手动下载，或按文末「📦 打包桌面程序」一节用源码自行构建（约几分钟）。
 
