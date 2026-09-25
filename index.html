@@ -530,12 +530,12 @@ body.dark .cc-head select, body.dark .cc-edit { background:#2b2b30; color:#e6e6e
 .viz-del-btn { border:none; background:none; color:#e8590c; cursor:pointer; font-size:14px; }
 .viz-add-row { display:flex; gap:8px; padding:8px; }
 .viz-add-row button { padding:4px 12px; border:1px solid #dcdfe6; background:#fff; border-radius:6px; cursor:pointer; font-size:12px; }
-.viz-stats { display:flex; gap:10px; flex-wrap:wrap; margin:12px 0; }
+.viz-stats { display:flex; gap:10px; flex-wrap:wrap; margin:8px 0; }
 .viz-stat-card { flex:1; min-width:180px; border:1px solid #e5e6eb; border-radius:8px; padding:8px 10px; }
 .vsc-name { font-weight:600; font-size:12px; margin-bottom:6px; color:#1a7f5a; }
 .vsc-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; font-size:11px; color:#555; }
 .vsc-grid b { color:#999; font-weight:400; margin-right:3px; }
-.viz-canvas { width:100%; height:360px; display:block; border:1px solid #eceef1; border-radius:8px; background:#fff; }
+.viz-canvas { width:100%; display:block; border:1px solid #eceef1; border-radius:8px; background:#fff; }
 body.dark .viz-types button, body.dark .viz-add-row button { background:#2a2a2a; color:#ddd; border-color:#444; }
 body.dark .viz-table th, body.dark .viz-op { background:#262626; }
 body.dark .viz-table td, body.dark .viz-table th { border-color:#3a3a3a; }
@@ -556,6 +556,21 @@ body.dark .free-note-text.ph { color:#8a8264; }
   border:2px dashed #1a7f5a; background:rgba(26,127,90,.10); border-radius:8px;
 }
 .canvas-wrap.tool-text { cursor:crosshair; }
+
+/* ===== 统一标注编辑器 ===== */
+.annot-modal { width:min(580px,94vw); }
+.annot-sec-title { font-size:12px; font-weight:600; color:#666; margin:10px 0 6px; }
+.annot-no-row { display:flex; align-items:center; gap:8px; margin:6px 0 2px; flex-wrap:wrap; }
+.annot-check { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:#555; cursor:pointer; user-select:none; }
+.annot-check input { width:auto; height:auto; margin:0; }
+.annot-no-in { width:70px; height:28px; border:1px solid #dcdfe6; border-radius:6px; padding:0 6px; font-size:12px; text-align:center; }
+.annot-overall { border:1px dashed #c4c9d2; border-radius:8px; padding:10px; margin-top:4px; }
+.annot-overall textarea { width:100%; box-sizing:border-box; border:1px solid #e5e6eb; border-radius:8px; padding:8px; font-size:13px; font-family:inherit; resize:vertical; outline:none; }
+.gw-no { font-size:9px; font-weight:700; color:#e8590c; vertical-align:super; line-height:0; margin-left:1px; }
+body.dark .annot-check, body.dark .annot-sec-title { color:var(--dm-text2); }
+body.dark .annot-overall { border-color:#4a4d55; }
+body.dark .annot-overall textarea, body.dark .annot-no-in { background:var(--dm-bg); color:var(--dm-text); border-color:var(--dm-border); }
+body.no-explain .gw-no { display:none; }
 
 /* ===== 序号角标 ===== */
 .seq-badge {
@@ -618,6 +633,7 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
     <button class="icon-btn" @click="toggleDark" :title="darkMode?'切换日间模式（D）':'切换夜间模式（D）'">{{ darkMode ? '☀️' : '🌙' }}</button>
     <button class="icon-btn" @click="fitView" title="适应窗口（F / Ctrl+0）">⛶</button>
     <span class="zoom">{{ Math.round(view.scale*100) }}%</span>
+    <button class="icon-btn" @click="openExport" title="导出 Markdown / Mermaid / 图片（Ctrl+E）">📤</button>
     <button class="icon-btn settings-gear" @click="openMoreMenu" title="设置（M）">⚙</button>
   </div>
 
@@ -688,7 +704,7 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
         <textarea v-if="nt.id===editingNoteId" class="free-note-input" v-model="noteEditText"
                   @blur="saveNoteEdit" @keydown.esc.stop.prevent="cancelNoteEdit"
                   @mousedown.stop @click.stop @dblclick.stop></textarea>
-        <div v-else class="free-note-text" :class="{ph:!nt.text}">{{ nt.text || '双击输入文本' }}</div>
+        <div v-else class="free-note-text" :class="{ph:!nt.text}" :title="nt.desc||''"><template v-if="nt.text"><template v-for="(seg,si) in noteSegs(nt)" :key="si"><span v-if="seg.mark" class="gloss-word" :class="seg.mark.style"><span v-if="seg.mark.note" class="gw-tip">{{ seg.mark.note }}</span>{{ seg.t }}<sup v-if="seg.mark.no" class="gw-no">{{ seg.mark.no }}</sup></span><template v-else>{{ seg.t }}</template></template></template><template v-else>双击输入文本</template></div>
         <span class="note-resize" title="拖动调整大小" @mousedown.stop="startResizeNote(nt,$event)"></span>
       </div>
       <div v-for="n in layout.nodes" :key="'n'+n.id"
@@ -706,7 +722,7 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
                 @click.stop="toggleTagRelation(t)">{{ t }}</span>
           <span v-if="n.tags.length>2" class="tag-badge">+{{ n.tags.length-2 }}</span>
         </div>
-        <span class="node-text-segs"><template v-for="(seg,si) in n.segs" :key="si"><span v-if="seg.mark" class="gloss-word" :class="seg.mark.style"><span v-if="seg.mark.note" class="gw-tip">{{ seg.mark.note }}</span>{{ seg.t }}</span><template v-else>{{ seg.t }}</template></template></span>
+        <span class="node-text-segs"><template v-for="(seg,si) in n.segs" :key="si"><span v-if="seg.mark" class="gloss-word" :class="seg.mark.style"><span v-if="seg.mark.note" class="gw-tip">{{ seg.mark.note }}</span>{{ seg.t }}<sup v-if="seg.mark.no" class="gw-no">{{ seg.mark.no }}</sup></span><template v-else>{{ seg.t }}</template></template></span>
         <span v-if="n.seq" class="seq-badge node-seq">{{ n.seq.no }}<span class="gw-tip">{{ n.seq.text }}</span></span>
         <span class="node-resize" title="拖动调整节点宽度" @mousedown.stop="startResizeNode(n,$event)"></span>
       </div>
@@ -768,7 +784,6 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
           <div class="menu-item" @click="openEdit"><span class="ico">✎</span>编辑节点文字</div>
           <div class="menu-item" @click="resetNodePosition"><span class="ico">⟲</span>重置节点位置</div>
           <div class="menu-item" @click="openConnManager"><span class="ico">🔗</span>管理连接<span class="badge" v-if="currentMap && currentMap.connections.length">{{ currentMap.connections.length }}</span></div>
-          <div class="menu-item" @click="openExport"><span class="ico">📤</span>导出（Markdown / Mermaid / 图片）</div>
           <div class="menu-item" @click="openMdImport"><span class="ico">📥</span>Markdown 转导图（粘贴文本生成）</div>
           <div class="menu-item" @click="openViz"><span class="ico">📊</span>可视化（表格 / 图表统计）</div>
           <div class="menu-item" @click="openMapManager"><span class="ico">📁</span>导图管理（{{ maps.length }}个）</div>
@@ -878,7 +893,7 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
             </div>
           </div>
         </div>
-        <canvas ref="vizCanvas" class="viz-canvas"></canvas>
+        <canvas ref="vizCanvas" class="viz-canvas" :style="{height:vizCanvasH+'px'}"></canvas>
       </div>
       <div class="modal-footer">
         <button class="solid" v-if="chartBindTarget" @click="applyVizToChart">保存到画布图表</button>
@@ -969,48 +984,44 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
     </div>
   </div>
 
-  <!-- 词汇解释 / 标注 -->
-  <div class="modal-mask" :class="{show:showGloss}" @click.self="showGloss=false">
-    <div class="modal" style="max-width:500px;">
-      <div class="modal-header"><span>词汇解释 / 标注</span><button class="close" @click="showGloss=false">×</button></div>
+  <!-- 统一标注 / 解释 -->
+  <div class="modal-mask" :class="{show:showAnnot}" @click.self="showAnnot=false">
+    <div class="modal annot-modal">
+      <div class="modal-header"><span>标注 / 解释（词汇 + 序号）</span><button class="close" @click="showAnnot=false">×</button></div>
       <div class="modal-body">
-        <div class="sc-tip">给当前节点文本里出现的词或短语添加解释与高亮样式。完成后把鼠标悬浮在节点中<strong>加粗 / 带下划线</strong>的词上，就会弹出解释气泡。所填词汇需与节点文字完全一致。</div>
-        <div v-if="!glossItems.length" class="empty-tip">还没有标注，点下方「＋ 添加词汇」</div>
-        <div v-for="(g,i) in glossItems" :key="'g'+i" class="gloss-edit-item">
-          <input v-model="g.word" placeholder="要标注的词或短语，如：关键指标" />
-          <input v-model="g.note" placeholder="悬浮时显示的解释，如：用于衡量目标完成情况的数据" />
-          <div class="gloss-style">
-            <button type="button" :class="{on:g.style==='b'}" @click="g.style='b'"><b>加粗</b></button>
-            <button type="button" :class="{on:g.style==='u'}" @click="g.style='u'"><span style="text-decoration:underline">下划线</span></button>
-            <button type="button" :class="{on:g.style==='bu'}" @click="g.style='bu'"><b style="text-decoration:underline">加粗+下划线</b></button>
+        <div class="sc-tip">给对象添加标注：可标注文本里的<strong>词或短语</strong>（加粗 / 下划线，悬浮显示解释），也可写<strong>整体说明</strong>。每条标注都能勾选「添加序号」，也可以不添加；带序号的标注会在导出 PNG 底部统一列出。</div>
+        <template v-if="annotSupportsWords">
+          <div class="annot-sec-title">词汇标注（在文本中高亮并悬浮解释）</div>
+          <div v-if="!annotWords.length" class="empty-tip">还没有词汇标注，点下方「＋ 添加词汇」</div>
+          <div v-for="(g,i) in annotWords" :key="'aw'+i" class="gloss-edit-item">
+            <input v-model="g.word" placeholder="要标注的词或短语，需与文本完全一致，如：关键指标" />
+            <input v-model="g.note" placeholder="悬浮时显示的解释，如：用于衡量目标完成情况的数据" />
+            <div class="gloss-style">
+              <button type="button" :class="{on:g.style==='b'}" @click="g.style='b'"><b>加粗</b></button>
+              <button type="button" :class="{on:g.style==='u'}" @click="g.style='u'"><span style="text-decoration:underline">下划线</span></button>
+              <button type="button" :class="{on:g.style==='bu'}" @click="g.style='bu'"><b style="text-decoration:underline">加粗+下划线</b></button>
+            </div>
+            <div class="annot-no-row">
+              <label class="annot-check"><input type="checkbox" :checked="g.addNo" @click="annotToggleWordNo(i,$event)">添加序号</label>
+              <input v-if="g.addNo" v-model.number="g.no" type="number" min="1" class="annot-no-in" title="可手动改编号" />
+              <span v-if="g.addNo" style="font-size:11px;color:#999;">编号（可改）</span>
+            </div>
+            <button class="gloss-del" @click="annotRemoveWord(i)">删除该标注</button>
           </div>
-          <button class="gloss-del" @click="removeGloss(i)">删除该标注</button>
+        </template>
+        <div class="annot-sec-title">整体说明（针对整个对象）</div>
+        <div class="annot-overall">
+          <textarea v-model="annotOverall.text" rows="3" placeholder="写整体说明 / 解释；图片、图表等没有文本的对象用这里……"></textarea>
+          <div class="annot-no-row">
+            <label class="annot-check"><input type="checkbox" :checked="annotOverall.addNo" @click="annotToggleOverallNo($event)">添加序号角标</label>
+            <input v-if="annotOverall.addNo" v-model.number="annotOverall.no" type="number" min="1" class="annot-no-in" title="可手动改编号" />
+            <span v-if="annotOverall.addNo" style="font-size:11px;color:#999;">编号（可改）</span>
+          </div>
         </div>
       </div>
       <div class="modal-footer">
-        <button class="ghost" @click="addGloss">＋ 添加词汇</button>
-        <button class="solid" @click="saveGloss">完成</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- 序号注释 -->
-  <div class="modal-mask" :class="{show:showSeq}" @click.self="showSeq=false">
-    <div class="modal" style="max-width:460px;">
-      <div class="modal-header"><span>序号注释 {{ seqNo ? '#' + seqNo : '' }}</span><button class="close" @click="showSeq=false">×</button></div>
-      <div class="modal-body">
-        <div class="sc-tip">在节点或文本框上挂一个编号角标（{{ seqNo }}），鼠标悬浮角标即显示下面的解释；导出 PNG 时会在图片底部列出全部序号解释。编号在当前导图内自动递增。</div>
-        <div style="display:flex;align-items:center;gap:8px;margin:10px 0 6px;">
-          <span class="seq-badge static">{{ seqNo }}</span>
-          <input v-model.number="seqNo" type="number" min="1" style="width:90px;height:34px;border:1px solid #e5e6eb;border-radius:6px;padding:0 8px;" title="可手动改编号" />
-          <span style="font-size:12px;color:#999;">编号（可手动调整）</span>
-        </div>
-        <textarea v-model="seqText" class="seq-textarea" rows="4" placeholder="填写该序号对应的解释内容……"
-                  style="width:100%;border:1px solid #e5e6eb;border-radius:8px;padding:10px;font-size:13px;outline:none;font-family:inherit;resize:vertical;"></textarea>
-      </div>
-      <div class="modal-footer">
-        <button class="ghost" style="color:#e53935;" @click="removeSeq">删除序号</button>
-        <button class="solid" @click="saveSeq">保存</button>
+        <button class="ghost" v-if="annotSupportsWords" @click="annotAddWord">＋ 添加词汇</button>
+        <button class="solid" @click="saveAnnot">完成</button>
       </div>
     </div>
   </div>
@@ -1029,9 +1040,8 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
           <p><strong>✏️ 编辑文字：</strong>左键双击节点，或在节点上快速右键双击，也可按 F2 / 右键→编辑文字</p>
           <p><strong>⌨️ 快捷键：</strong>默认 Tab 加子节点、Enter 同级、Delete 删除、F2 编辑、T 标签、L 连接、R 重置、F 适应窗口、D 夜间、M 更多、Alt+N 新分支、Ctrl+N/M/E/A 新导图/管理/导出/全选、Esc 取消；可在「更多→快捷键设置」里自行改键，冲突会提醒</p>
           <p><strong>🎨 节点上色：</strong>右键节点 →「节点底色」7 种背景色、「文字颜色」8 种文字色，均可对多选节点批量设置，↺ 恢复自动配色</p>
-          <p><strong>🔤 词汇解释：</strong>右键节点 →「词汇解释 / 标注」，给文本中的指定词汇加解释并选加粗 / 下划线样式；设置后鼠标悬浮到该词会弹出深色解释气泡（导出 PNG 时加粗、下划线同样保留）</p>
-          <p><strong>📝 空白处加文本：</strong>点顶部「文本」模式，在画布空白处按住左键拖出一片区域，松开即生成便签并可直接输入；双击便签编辑、拖动移动、右键可删除或加序号注释，内容随导图保存</p>
-          <p><strong>① 序号注释：</strong>右键节点或便签 →「序号注释」，挂编号角标并写解释，悬浮角标查看；编号在当前导图自动递增，导出 PNG 时会在图片底部列出全部序号解释</p>
+          <p><strong>🔖 标注 / 解释（词汇 + 序号一体）：</strong>右键节点、便签、图片或图表 →「标注 / 解释」。可给文本里的<strong>词或短语</strong>加解释并选加粗 / 下划线（便签文本同样支持），也可写<strong>整体说明</strong>；每条都能勾选「添加序号」、也可不加，悬浮高亮词或角标查看解释，导出 PNG 时加粗 / 下划线 / 角标保留，并在底部按编号统一列出</p>
+          <p><strong>📝 空白处加文本：</strong>点顶部「文本」模式，在画布空白处按住左键拖出一片区域，松开即生成便签并可直接输入；双击便签编辑、拖动移动、右下角可改大小、右键可删除或加标注，内容随导图保存</p>
           <p><strong>✏️ 重命名导图：</strong>画布空白处右键 →「重命名本导图」，或双击顶部导图标签即可改名</p>
           <p><strong>↔️ 调整节点大小：</strong>把鼠标移到节点右下角，出现斜纹手柄后按住左键左右拖动即可改变节点宽度（文字自动换行），宽度随导图保存，同级节点自动让位</p>
           <p><strong>➕ 新增节点：</strong>加子节点 / 同级 / 新分支时画布保持当前视图，不再自动跳动平移</p>
@@ -1062,8 +1072,7 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
       <div class="ctx-item" @click="ctxCutNode"><span class="ci-ico">✂</span><span class="ci-label">剪切节点</span><span class="kbd2">Ctrl+X</span></div>
       <div class="ctx-item" @click="ctxPasteNode"><span class="ci-ico">📋</span><span class="ci-label">粘贴节点</span><span class="kbd2">Ctrl+V</span></div>
       <div class="ctx-item" @click="ctxReset"><span class="ci-ico">⟲</span><span class="ci-label">重置位置</span><span class="kbd2">R</span></div>
-      <div class="ctx-item" @click="ctxGloss"><span class="ci-ico">🔤</span><span class="ci-label">词汇解释 / 标注</span></div>
-      <div class="ctx-item" @click="ctxNodeSeq"><span class="ci-ico">①</span><span class="ci-label">序号注释</span></div>
+      <div class="ctx-item" @click="ctxNodeAnnot"><span class="ci-ico">🔖</span><span class="ci-label">标注 / 解释（词汇 + 序号）</span></div>
       <div class="ctx-sep"></div>
       <div class="ctx-color-title">节点底色（{{ NODE_PALETTE.length }} 色）</div>
       <div class="ctx-color-row">
@@ -1085,14 +1094,14 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
     <template v-else-if="ctxMenu.type==='note'">
       <div class="ctx-head">{{ ctxMenu.nodeText }}</div>
       <div class="ctx-item" @click="ctxNoteEdit"><span class="ci-ico">✎</span><span class="ci-label">编辑文本</span></div>
-      <div class="ctx-item" @click="ctxNoteSeq"><span class="ci-ico">①</span><span class="ci-label">序号注释</span></div>
+      <div class="ctx-item" @click="ctxNoteSeq"><span class="ci-ico">🔖</span><span class="ci-label">标注 / 解释（词汇 + 序号）</span></div>
       <div class="ctx-sep"></div>
       <div class="ctx-item danger" @click="ctxNoteDelete"><span class="ci-ico">✕</span><span class="ci-label">删除文本框</span><span class="kbd2">Del</span></div>
     </template>
     <template v-else-if="ctxMenu.type==='image'">
       <div class="ctx-head">{{ ctxMenu.nodeText }}</div>
       <div class="ctx-item" @click="ctxConnect"><span class="ci-ico">🔗</span><span class="ci-label">从此连接</span><span class="kbd2">L</span></div>
-      <div class="ctx-item" @click="ctxImageSeq"><span class="ci-ico">①</span><span class="ci-label">序号注释</span></div>
+      <div class="ctx-item" @click="ctxImageSeq"><span class="ci-ico">🔖</span><span class="ci-label">标注 / 解释（序号 + 说明）</span></div>
       <div class="ctx-sep"></div>
       <div class="ctx-item danger" @click="ctxImageDelete"><span class="ci-ico">✕</span><span class="ci-label">删除图片</span><span class="kbd2">Del</span></div>
     </template>
@@ -1100,6 +1109,7 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
       <div class="ctx-head">📊 图表</div>
       <div class="ctx-item" @click="ctxConnect"><span class="ci-ico">🔗</span><span class="ci-label">从此连接</span><span class="kbd2">L</span></div>
       <div class="ctx-item" @click="ctxChartData"><span class="ci-ico">✎</span><span class="ci-label">编辑数据</span></div>
+      <div class="ctx-item" @click="ctxChartAnnot"><span class="ci-ico">🔖</span><span class="ci-label">标注 / 解释（序号 + 说明）</span></div>
       <div class="ctx-sep"></div>
       <div class="ctx-item danger" @click="ctxChartDelete"><span class="ci-ico">✕</span><span class="ci-label">删除图表</span><span class="kbd2">Del</span></div>
     </template>
@@ -1174,14 +1184,20 @@ createApp({
     let noteSeq = 1;   // 自由文本框 id 计数
     let imageSeq = 1;  // 图片 id 计数
     let chartSeq = 1;  // 图表 id 计数
-    const makeNode = (text, children, tags) => ({ id: nextId++, text, children: children || [], tags: tags || [], marks: [], textColor: null, seq: null, offsetX: 0, offsetY: 0 });
-    const makeNote = (x, y, w, h, text) => ({ id: noteSeq++, x, y, w, h, text: text || '', seq: null });
+    const makeNode = (text, children, tags) => ({ id: nextId++, text, children: children || [], tags: tags || [], marks: [], textColor: null, seq: null, offsetX: 0, offsetY: 0, desc: null });
+    const makeNote = (x, y, w, h, text) => ({ id: noteSeq++, x, y, w, h, text: text || '', marks: [], seq: null, desc: null });
     const makeMap = (name, roots) => ({ id: 'map_' + (mapId++), name: name || '未命名导图', roots: roots || [], connections: [], notes: [], images: [], charts: [], createdAt: Date.now(), updatedAt: Date.now() });
-    const makeImage = (x, y, w, h, src, name) => ({ id: imageSeq++, x, y, w, h, src, name: name || '图片', seq: null });
+    const makeImage = (x, y, w, h, src, name) => ({ id: imageSeq++, x, y, w, h, src, name: name || '图片', seq: null, desc: null });
     const makeChart = (x, y) => ({ id: chartSeq++, x, y, w: 320, h: 240, chartType: 'bar',
       cols: [ {name:'类别'}, {name:'数值'} ],
-      rows: [ ['A',120], ['B',200], ['C',150], ['D',260] ], seq: null });
+      rows: [ ['A',120], ['B',200], ['C',150], ['D',260] ], seq: null, desc: null });
 
+    // 词汇标注清洗（含可选序号 no）
+    const cleanMarks = (arr) => (Array.isArray(arr) ? arr : [])
+      .filter(m => m && typeof m.word === 'string' && m.word.length)
+      .map(m => ({ word: m.word, note: typeof m.note === 'string' ? m.note : '',
+        style: ['b','u','bu'].indexOf(m.style) >= 0 ? m.style : 'u',
+        no: Number.isInteger(m.no) ? m.no : null }));
     // 序号注释结构清洗：{no:Number, text:String} 合法则保留，否则 null
     const cleanSeq = (s) => {
       if (!s || !Number.isInteger(s.no) || !s.text || !String(s.text).trim()) return null;
@@ -1204,12 +1220,13 @@ createApp({
       if (!Array.isArray(n.marks)) n.marks = [];
       // 兼容旧数据并清洗词汇标注
       n.marks = n.marks.filter(m => m && typeof m.word === 'string' && m.word.length)
-        .map(m => ({ word: m.word, note: typeof m.note === 'string' ? m.note : '', style: ['b','u','bu'].indexOf(m.style) >= 0 ? m.style : 'u' }));
+        .map(m => ({ word: m.word, note: typeof m.note === 'string' ? m.note : '', style: ['b','u','bu'].indexOf(m.style) >= 0 ? m.style : 'u', no: Number.isInteger(m.no) ? m.no : null }));
       if (n.textColor === undefined) n.textColor = null;
       // 自定义节点宽度（右下角拖拽），越界则回默认
       if (!Number.isFinite(n.w)) n.w = null;
       else n.w = Math.round(Math.min(MAX_W, Math.max(MIN_W, n.w)));
       n.seq = cleanSeq(n.seq);
+      n.desc = (typeof n.desc === 'string' && n.desc.trim()) ? n.desc.trim() : null;
       if (n.offsetX === undefined) n.offsetX = 0;
       if (n.offsetY === undefined) n.offsetY = 0;
       n.children.forEach(normalizeNode);
@@ -1244,7 +1261,9 @@ createApp({
                   x: Number(nt.x) || 0, y: Number(nt.y) || 0,
                   w: Math.max(60, Number(nt.w) || 140), h: Math.max(36, Number(nt.h) || 60),
                   text: typeof nt.text === 'string' ? nt.text : '',
-                  seq: cleanSeq(nt.seq)
+                  marks: cleanMarks(nt.marks),
+                  seq: cleanSeq(nt.seq),
+                  desc: (typeof nt.desc === 'string' && nt.desc.trim()) ? nt.desc.trim() : null
                 };
               });
               // 图片 / 图表兼容
@@ -1253,7 +1272,8 @@ createApp({
                 if (im.id >= imageSeq) imageSeq = im.id + 1;
                 return { id: im.id, x: Number(im.x)||0, y: Number(im.y)||0,
                   w: Math.max(40, Number(im.w)||200), h: Math.max(40, Number(im.h)||150),
-                  src: im.src, name: im.name || '图片', seq: cleanSeq(im.seq) };
+                  src: im.src, name: im.name || '图片', seq: cleanSeq(im.seq),
+                  desc: (typeof im.desc === 'string' && im.desc.trim()) ? im.desc.trim() : null };
               });
               if (!Array.isArray(m.charts)) m.charts = [];
               m.charts = m.charts.filter(ch => ch && Array.isArray(ch.cols) && Array.isArray(ch.rows)).map(ch => {
@@ -1262,7 +1282,8 @@ createApp({
                   w: Math.max(160, Number(ch.w)||320), h: Math.max(140, Number(ch.h)||240),
                   chartType: ['bar','hbar','pie','line','treemap'].indexOf(ch.chartType) >= 0 ? ch.chartType : 'bar',
                   cols: ch.cols.map(c => ({ name: String(c && c.name ? c.name : '列') })),
-                  rows: ch.rows.map(r => r.slice()), seq: cleanSeq(ch.seq) };
+                  rows: ch.rows.map(r => r.slice()), seq: cleanSeq(ch.seq),
+                  desc: (typeof ch.desc === 'string' && ch.desc.trim()) ? ch.desc.trim() : null };
               });
               const mid = parseInt((m.id || '').replace('map_', ''));
               if (mid >= mapId) mapId = mid + 1;
@@ -1642,11 +1663,12 @@ createApp({
       parts.forEach(p => {
         if (p === '' || p == null) return;
         const m = byWord[p];
-        out.push(m ? { t: p, mark: { note: m.note || '', style: ['b','u','bu'].indexOf(m.style) >= 0 ? m.style : 'u' } }
+        out.push(m ? { t: p, mark: { note: m.note || '', style: ['b','u','bu'].indexOf(m.style) >= 0 ? m.style : 'u', no: Number.isInteger(m.no) ? m.no : null } }
                    : { t: p, mark: null });
       });
       return out.length ? out : plain;
     };
+    const noteSegs = (nt) => buildSegs(nt ? nt.text : '', nt ? nt.marks : []);
 
     // ===== 布局（多根节点） =====
     const layout = computed(() => {
@@ -2234,6 +2256,7 @@ createApp({
     };
     const ctxChartDelete=()=>{closeCtxMenu();deleteSelectedChart();};
     const ctxChartData=()=>{closeCtxMenu();const ch=findChart(selectedChartId.value);if(ch)openChartDataEditor(ch);};
+    const ctxChartAnnot=()=>{closeCtxMenu();openAnnotEditor('chart',selectedChartId.value);};
     const ctxAddChartWidget=()=>{
       closeCtxMenu();
       const ch=makeChart(ctxMenu.wx,ctxMenu.wy);
@@ -2246,61 +2269,80 @@ createApp({
       chartBindTarget.value=ch;
       viz.cols=ch.cols.map(c=>({name:c.name}));
       viz.rows=ch.rows.map(r=>r.slice());
+      vizChartType.value=ch.chartType||'bar';
       showViz.value=true;nextTick(drawVizChart);
     };
     const applyVizToChart=()=>{
       if(chartBindTarget.value){const ch=findChart(chartBindTarget.value.id);
-        if(ch){ch.cols=viz.cols.map(c=>({name:c.name}));ch.rows=viz.rows.map(r=>r.slice());saveMaps();nextTick(()=>drawWidget(ch.id));toast('图表已更新');}}
+        if(ch){ch.cols=viz.cols.map(c=>({name:c.name}));ch.rows=viz.rows.map(r=>r.slice());ch.chartType=vizChartType.value;saveMaps();nextTick(()=>drawWidget(ch.id));toast('图表已更新');}}
       chartBindTarget.value=null;showViz.value=false;
     };
     watch(currentMap,()=>nextTick(()=>{if(currentMap.value)currentMap.value.charts.forEach(c=>drawWidget(c.id));}),{immediate:true});
 
-    // ===== 序号注释（节点 / 自由文本通用，编号 + 悬浮解释，导图内自动递增）=====
-    const showSeq = ref(false);
-    const seqTarget = ref(null);
-    const seqNo = ref(1);
-    const seqText = ref('');
-    const collectSeqList = () => {
-      const arr = [];
-      const push = (s) => { if (s && Number.isInteger(s.no)) arr.push(s); };
-      const walk = (n) => { push(n.seq); n.children.forEach(walk); };
-      (currentMap.value ? currentMap.value.roots : []).forEach(walk);
-      (currentMap.value ? (currentMap.value.notes || []) : []).forEach(nt => push(nt.seq));
-      return arr;
+    // ===== 统一标注 / 解释（词汇标注 + 序号注释融合；序号可选；节点 / 便签 / 图片 / 图表通用）=====
+    const showAnnot = ref(false);
+    const annotTarget = ref(null);
+    const annotWords = ref([]);
+    const annotOverall = ref({ text: '', addNo: false, no: 1 });
+    const annotSupportsWords = computed(() => { const k = annotTarget.value && annotTarget.value.kind; return k === 'node' || k === 'note'; });
+    const collectAnnotNos = () => {
+      const nos = [];
+      const fromMarks = (arr) => (arr || []).forEach(m => { if (m && Number.isInteger(m.no)) nos.push(m.no); });
+      const walk = (n) => { if (n.seq && Number.isInteger(n.seq.no)) nos.push(n.seq.no); fromMarks(n.marks); n.children.forEach(walk); };
+      const mp = currentMap.value;
+      (mp ? mp.roots : []).forEach(walk);
+      (mp ? mp.notes || [] : []).forEach(nt => { if (nt.seq) nos.push(nt.seq.no); fromMarks(nt.marks); });
+      (mp ? mp.images || [] : []).forEach(im => { if (im.seq) nos.push(im.seq.no); });
+      (mp ? mp.charts || [] : []).forEach(ch => { if (ch.seq) nos.push(ch.seq.no); });
+      return nos;
     };
-    const nextSeqNo = () => { let mx = 0; collectSeqList().forEach(s => { if (s.no > mx) mx = s.no; }); return mx + 1; };
-    const getSeq = (kind, id) => {
-      if (kind === 'note') { const n = findNote(id); return n ? n.seq : null; }
-      if (kind === 'image') { const n = findImage(id); return n ? n.seq : null; }
-      const n = findNode(id); return n ? n.seq : null;
+    const nextAnnotNo = () => { let mx = 0; collectAnnotNos().forEach(n => { if (n > mx) mx = n; }); return mx + 1; };
+    const getAnnotObj = (kind, id) => {
+      if (kind === 'note') return findNote(id);
+      if (kind === 'image') return findImage(id);
+      if (kind === 'chart') return findChart(id);
+      return findNode(id);
     };
-    const openSeqEditor = (kind, id) => {
-      if (id === null || id === undefined) { toast('请先选中节点或文本框'); return; }
-      const existing = getSeq(kind, id);
-      seqTarget.value = { kind, id };
-      if (existing) { seqNo.value = existing.no; seqText.value = existing.text; }
-      else { seqNo.value = nextSeqNo(); seqText.value = ''; }
-      showSeq.value = true;
-      nextTick(() => { const el = document.querySelector('.seq-textarea'); if (el) el.focus(); });
+    const openAnnotEditor = (kind, id) => {
+      if (id === null || id === undefined) { toast('请先选中对象'); return; }
+      const o = getAnnotObj(kind, id);
+      if (!o) { toast('未找到对象'); return; }
+      annotTarget.value = { kind, id };
+      const marks = (kind === 'node' || kind === 'note') ? (o.marks || []) : [];
+      annotWords.value = marks.map(m => ({ word: m.word, note: m.note || '', style: ['b','u','bu'].indexOf(m.style) >= 0 ? m.style : 'u',
+        addNo: Number.isInteger(m.no), no: Number.isInteger(m.no) ? m.no : nextAnnotNo() }));
+      if (o.seq) annotOverall.value = { text: o.seq.text || '', addNo: true, no: o.seq.no };
+      else annotOverall.value = { text: o.desc || '', addNo: false, no: nextAnnotNo() };
+      showAnnot.value = true;
+      nextTick(() => { const el = document.querySelector('.annot-overall textarea'); if (el) el.focus(); });
     };
-    const saveSeq = () => {
-      const t = seqTarget.value; if (!t) return;
-      const text = seqText.value.trim();
-      if (!text) { toast('请填写序号对应的解释'); return; }
-      const data = { no: Number(seqNo.value) || nextSeqNo(), text };
-      if (t.kind === 'note') { const n = findNote(t.id); if (n) n.seq = data; }
-      else if (t.kind === 'image') { const n = findImage(t.id); if (n) n.seq = data; }
-      else { const n = findNode(t.id); if (n) n.seq = data; }
-      saveMaps(); showSeq.value = false; toast('已添加序号 ' + data.no + ' 的解释');
+    const annotAddWord = () => { annotWords.value.push({ word: '', note: '', style: 'u', addNo: false, no: nextAnnotNo() }); };
+    const annotRemoveWord = (i) => { annotWords.value.splice(i, 1); };
+    const annotToggleWordNo = (i, e) => { const r = annotWords.value[i]; if (!r) return; r.addNo = e.target.checked; if (r.addNo) r.no = nextAnnotNo(); };
+    const annotToggleOverallNo = (e) => { annotOverall.value.addNo = e.target.checked; if (annotOverall.value.addNo) annotOverall.value.no = nextAnnotNo(); };
+    const saveAnnot = () => {
+      const t = annotTarget.value; if (!t) return;
+      const o = getAnnotObj(t.kind, t.id); if (!o) { showAnnot.value = false; return; }
+      if (t.kind === 'node' || t.kind === 'note') {
+        o.marks = annotWords.value.filter(g => g.word && g.word.trim())
+          .map(g => ({ word: g.word.trim(), note: (g.note || '').trim(),
+            style: ['b','u','bu'].indexOf(g.style) >= 0 ? g.style : 'u',
+            no: g.addNo ? (parseInt(g.no, 10) || nextAnnotNo()) : null }));
+      }
+      const ot = annotOverall.value.text.trim();
+      if (ot && annotOverall.value.addNo) { o.seq = { no: parseInt(annotOverall.value.no, 10) || nextAnnotNo(), text: ot }; o.desc = null; }
+      else if (ot) { o.seq = null; o.desc = ot; }
+      else { o.seq = null; o.desc = null; }
+      saveMaps(); showAnnot.value = false;
+      const cnt = (o.marks ? o.marks.length : 0);
+      toast('已保存标注' + (cnt ? '（' + cnt + ' 个词汇）' : '') + (o.seq ? '，序号 ' + o.seq.no : ''));
     };
-    const removeSeq = () => {
-      const t = seqTarget.value; if (!t) return;
-      if (t.kind === 'note') { const n = findNote(t.id); if (n) n.seq = null; }
-      else if (t.kind === 'image') { const n = findImage(t.id); if (n) n.seq = null; }
-      else { const n = findNode(t.id); if (n) n.seq = null; }
-      saveMaps(); showSeq.value = false; toast('已删除序号注释');
-    };
-    const ctxNodeSeq = () => { closeCtxMenu(); openSeqEditor('node', selectedId.value); };
+    // 兼容旧入口（右键菜单 / 快捷键 / 便签 / 图片）
+    const openGlossEditor = () => openAnnotEditor('node', selectedId.value);
+    const openSeqEditor = (kind, id) => openAnnotEditor(kind, id);
+    const ctxNodeAnnot = () => { closeCtxMenu(); openAnnotEditor('node', selectedId.value); };
+    const ctxNodeSeq = ctxNodeAnnot;
+    const ctxGloss = ctxNodeAnnot;
 
     // ===== 节点拖动 + 点击 =====
     let lastTapTime = 0, lastTapNode = null;
@@ -2559,31 +2601,7 @@ createApp({
       return i >= 0 ? i : -1;
     });
 
-    // ===== 词汇解释 / 标注 =====
-    const showGloss = ref(false);
-    const glossItems = ref([]);
-    let glossNodeId = null;
-    const openGlossEditor = () => {
-      const n = findNode(selectedId.value);
-      if (!n) { toast('请先选中节点'); return; }
-      glossNodeId = n.id;
-      glossItems.value = (n.marks || []).map(m => ({ word: m.word, note: m.note || '', style: m.style || 'u' }));
-      if (!glossItems.value.length) glossItems.value.push({ word: '', note: '', style: 'u' });
-      showGloss.value = true;
-    };
-    const ctxGloss = () => { closeCtxMenu(); openGlossEditor(); };
-    const addGloss = () => { glossItems.value.push({ word: '', note: '', style: 'u' }); };
-    const removeGloss = (i) => { glossItems.value.splice(i, 1); };
-    const saveGloss = () => {
-      const n = glossNodeId != null ? findNode(glossNodeId) : null;
-      if (!n) { showGloss.value = false; return; }
-      n.marks = glossItems.value
-        .filter(g => g.word && g.word.trim())
-        .map(g => ({ word: g.word.trim(), note: (g.note || '').trim(), style: ['b','u','bu'].indexOf(g.style) >= 0 ? g.style : 'u' }));
-      saveMaps();
-      showGloss.value = false;
-      toast(n.marks.length ? '已保存 ' + n.marks.length + ' 个词汇标注' : '已清空词汇标注');
-    };
+    // （词汇解释 / 标注已与序号注释合并为「统一标注」，见上方 showAnnot / openAnnotEditor）
 
     // ===== 全选 / 方向键微移 =====
     const selectAllNodes = () => {
@@ -2946,6 +2964,7 @@ createApp({
       // 序号注释列表（去重、按编号排序）——含节点/便签/图片/图表
       const seqMap = new Map();
       boxes.forEach(b => { const sq=b.ref.seq; if(sq && Number.isInteger(sq.no)) seqMap.set(sq.no, sq.text); });
+      boxes.forEach(b => { const ms=b.ref.marks; if(Array.isArray(ms)) ms.forEach(m=>{ if(m && Number.isInteger(m.no) && !seqMap.has(m.no)) seqMap.set(m.no, (m.word?m.word+'：':'')+(m.note||'')); }); });
       const seqList = [...seqMap.entries()].sort((a,b)=>a[0]-b[0]).map(([no,text])=>({no,text}));
 
       // 全局边界 + 统一平移，保证任何对象（含被拖到负坐标的节点）都不被裁切
@@ -2979,6 +2998,22 @@ createApp({
           lines.push(line);
         });
         return lines;
+      };
+      const wrapNotePieces = (c, text, marks, maxW) => {
+        const pieceFont = (mark) => (mark && (mark.style==='b'||mark.style==='bu')) ? 'bold 13px '+FONT_FAMILY : '13px '+FONT_FAMILY;
+        const result = [];
+        String(text==null?'':text).split('\n').forEach(segText=>{
+          const segs = buildSegs(segText, marks);
+          const atoms=[];
+          segs.forEach(sg=>{ for(const ch of sg.t) atoms.push({ch,mark:sg.mark}); });
+          let cur=[],curW=0;
+          const flush=()=>{ const ps=[]; cur.forEach(a=>{const last=ps[ps.length-1]; if(last&&last.mark===a.mark)last.t+=a.ch; else ps.push({t:a.ch,mark:a.mark});}); result.push(ps); cur=[];curW=0; };
+          atoms.forEach(a=>{ c.font=pieceFont(a.mark); const w=c.measureText(a.ch).width;
+            if(cur.length&&curW+w>maxW)flush();
+            cur.push(a);curW+=w; });
+          flush();
+        });
+        return result;
       };
       // 底部序号注释区高度
       mCtx.font = '12px ' + FONT_FAMILY;
@@ -3048,7 +3083,7 @@ createApp({
         const setFont = (bold) => { ctx.font = (bold ? 'bold ' : '') + (n.isRoot ? '14px ' : '13px ') + FONT_FAMILY; };
         const isBoldSeg = (s) => n.isRoot || (s.mark && (s.mark.style === 'b' || s.mark.style === 'bu'));
         let totalW = 0;
-        segs.forEach(s => { setFont(isBoldSeg(s)); totalW += ctx.measureText(s.t).width; });
+        segs.forEach(s => { setFont(isBoldSeg(s)); totalW += ctx.measureText(s.t).width + (s.mark && s.mark.no ? 6 : 0); });
         ctx.textBaseline = 'middle';
         if (totalW > maxW) {
           setFont(n.isRoot);
@@ -3070,6 +3105,7 @@ createApp({
               ctx.strokeStyle = nodeTextColor; ctx.lineWidth = 1.4;
               ctx.beginPath(); ctx.moveTo(x, cy + 8); ctx.lineTo(x + w, cy + 8); ctx.stroke();
             }
+            if (s.mark && s.mark.no) { const f=ctx.font; ctx.font='8px '+FONT_FAMILY; ctx.fillStyle='#e8590c'; ctx.textAlign='left'; ctx.fillText(String(s.mark.no), x+w+1, cy-7); ctx.font=f; x+=6; }
             x += w;
           });
         }
@@ -3106,8 +3142,19 @@ createApp({
         ctx.fillStyle = '#5d4037'; ctx.font = '13px ' + FONT_FAMILY;
         ctx.textAlign = 'left'; ctx.textBaseline = 'top';
         const pad = 10, lh = 19, maxLines = Math.max(1, Math.floor((nt.h - pad*2) / lh));
-        const lines = wrapLines(ctx, nt.text || '', nt.w - pad*2).slice(0, maxLines);
-        lines.forEach((ln, i) => ctx.fillText(ln, nt.x + pad, nt.y + pad + i*lh));
+        const nlines = wrapNotePieces(ctx, nt.text || '', nt.marks, nt.w - pad*2).slice(0, maxLines);
+        nlines.forEach((pieces,li) => {
+          let px = nt.x + pad; const py = nt.y + pad + li*lh;
+          pieces.forEach(pc => {
+            ctx.font = (pc.mark && (pc.mark.style==='b'||pc.mark.style==='bu')) ? 'bold 13px '+FONT_FAMILY : '13px '+FONT_FAMILY;
+            ctx.fillStyle = '#5d4037'; ctx.textAlign='left'; ctx.textBaseline='top';
+            ctx.fillText(pc.t, px, py);
+            const pw = ctx.measureText(pc.t).width;
+            if (pc.mark && (pc.mark.style==='u'||pc.mark.style==='bu')) { ctx.strokeStyle='#5d4037'; ctx.lineWidth=1.2; ctx.beginPath(); ctx.moveTo(px,py+15); ctx.lineTo(px+pw,py+15); ctx.stroke(); }
+            if (pc.mark && pc.mark.no) { const f=ctx.font; ctx.font='8px '+FONT_FAMILY; ctx.fillStyle='#e8590c'; ctx.fillText(String(pc.mark.no),px+pw+1,py-3); ctx.font=f; px+=6; }
+            px += pw;
+          });
+        });
         if (nt.seq) drawBadge(nt.x + nt.w - 4, nt.y - 4, nt.seq.no);
       });
       // 图片
@@ -3196,7 +3243,7 @@ createApp({
 
     // ===== 生命周期 / 快捷键 =====
     const anyModalOpen = () => showMenu.value || showMapManager.value || showConnManager.value ||
-      showExport.value || showConfirm.value || showHelpModal.value || showShortcuts.value || showSeq.value ||
+      showExport.value || showConfirm.value || showHelpModal.value || showShortcuts.value || showAnnot.value ||
       editing.value || editingTag.value || renamingMap.value || editingNoteId.value !== null;
     // 删除：优先删除选中的连接线，否则删除选中节点
     const handleDelete = () => {
@@ -3317,6 +3364,13 @@ createApp({
                max: vals.length ? Math.max(...vals) : 0,
                min: vals.length ? Math.min(...vals) : 0 };
     }));
+    const vizCanvasH = computed(() => {
+      const n = viz.rows.length, t = vizChartType.value;
+      if (t === 'hbar') return Math.max(150, Math.min(300, n*30 + 64));
+      if (t === 'pie') return 250;
+      if (t === 'treemap') return 270;
+      return 270;
+    });
     const onVizCell = (ri, ci, val) => { viz.rows[ri][ci] = val; };
     const vizAddRow = () => { viz.rows.push(viz.cols.map((c,ci) => ci === 0 ? '新项目' : '')); };
     const vizAddCol = () => { viz.cols.push({name:'列'+(viz.cols.length+1)}); viz.rows.forEach(r => r.push('')); };
@@ -3448,6 +3502,10 @@ createApp({
     watch([showViz, vizChartType, vizValueCol], () => { if (showViz.value) nextTick(drawVizChart); });
     watch(viz, () => { if (showViz.value) nextTick(drawVizChart); }, { deep: true });
     watch(vizNumericCols, (arr) => { if (arr.length && arr.indexOf(Number(vizValueCol.value)) < 0) vizValueCol.value = arr[0]; });
+    watch(vizChartType, (v) => {
+      if (chartBindTarget.value) { const ch = findChart(chartBindTarget.value.id);
+        if (ch && ch.chartType !== v) { ch.chartType = v; saveMaps(); nextTick(() => drawWidget(ch.id)); } }
+    });
 
     const onKeyDown = (e) => {
       // 录制快捷键时，由捕获阶段的 onCaptureKey 处理，这里不参与
@@ -3537,12 +3595,13 @@ createApp({
       editingTag, tagInput, tagInputEl, wrapRef, view, dragNodeId, isGroupDragging,
       spaceDown, isPanning, ctxMenu, NODE_PALETTE, selectedColor, ctxPaint,
       TEXT_PALETTE, selectedTextColor, ctxPaintText,
-      showGloss, glossItems, addGloss, removeGloss, saveGloss, openGlossEditor, ctxGloss,
+      showAnnot, annotTarget, annotWords, annotOverall, annotSupportsWords, annotAddWord, annotRemoveWord,
+      annotToggleWordNo, annotToggleOverallNo, saveAnnot, openAnnotEditor, openGlossEditor, ctxGloss, ctxNodeAnnot,
       toolMode, toggleToolMode, setToolMode, noteRect,
       freeNotes, selectedNoteId, editingNoteId, noteEditText,
       onNoteMouseDown, onNoteDblClick, onNoteContextMenu, startEditNote, saveNoteEdit, cancelNoteEdit, deleteSelectedNote,
       ctxNoteEdit, ctxNoteDelete, ctxNoteSeq,
-      showSeq, seqNo, seqText, saveSeq, removeSeq, ctxNodeSeq,
+      noteSegs, ctxNodeSeq,
       ctxRenameCurrent, ctxEnterText,
       renamingMap, renameText, renameInput,
       darkMode, toggleDark,
@@ -3568,13 +3627,13 @@ createApp({
       ctxCopyNode, ctxCutNode, ctxPasteNode, copySelectedNodes, pasteClipboardNodes, startResizeNote,
       askConfirm, doConfirm, showHelp,
       showMdImport, mdImportText, mdImportMode, openMdImport, applyMdImport, ctxMdImport,
-      showViz, vizChartType, vizValueCol, viz, vizNumericCols, vizStats,
+      showViz, vizChartType, vizValueCol, viz, vizNumericCols, vizStats, vizCanvasH,
       onVizCell, vizAddRow, vizAddCol, vizDelRow, vizDelLastCol, openViz, ctxViz,
       showExplain, toggleExplain,
       freeImages, selectedImageId, onImageMouseDown, startResizeImage, onImageContextMenu,
       deleteSelectedImage, ctxImageDelete, ctxImageSeq, ctxInsertImage, imgFileEl, onImageFileChosen,
       freeCharts, selectedChartId, setChartCanvas, onChartMouseDown, startResizeChart, onChartContextMenu,
-      onChartDblClick, setWidgetType, deleteSelectedChart, ctxChartDelete, ctxChartData, ctxAddChartWidget,
+      onChartDblClick, setWidgetType, deleteSelectedChart, ctxChartDelete, ctxChartData, ctxChartAnnot, ctxAddChartWidget,
       chartBindTarget, openChartDataEditor, applyVizToChart
     };
   }
