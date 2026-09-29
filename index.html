@@ -487,6 +487,20 @@ body.dark .gloss-style button.on { background:#1a7f5a; color:#fff; border-color:
 .switch .knob { position:absolute; top:2px; left:2px; width:18px; height:18px; border-radius:50%; background:#fff; transition:left .15s; box-shadow:0 1px 3px rgba(0,0,0,.3); }
 .switch.on { background:#1a7f5a; }
 .switch.on .knob { left:20px; }
+.apikey-input {
+  width:100%; box-sizing:border-box; padding:7px 9px; font-size:12px;
+  border:1px solid #d0d5dc; border-radius:6px; background:#fff; color:#333; font-family:inherit;
+}
+.apikey-input:focus { outline:none; border-color:#1a7f5a; box-shadow:0 0 0 2px rgba(26,127,90,.18); }
+body.dark .apikey-input { background:#2b2b30; border-color:#4a4d55; color:#e6e6ea; }
+.ai-tidy-row { display:flex; align-items:center; gap:10px; margin-bottom:8px; flex-wrap:wrap; }
+.ai-tidy-btn {
+  padding:7px 12px; font-size:12px; font-family:inherit; cursor:pointer;
+  background:#5f3dc4; color:#fff; border:none; border-radius:6px; font-weight:600;
+}
+.ai-tidy-btn:hover:not(:disabled) { background:#4c2fb0; }
+.ai-tidy-btn:disabled { opacity:.6; cursor:wait; }
+.ai-tidy-loading { font-size:12px; color:#888; }
 body.no-explain .gloss-word { text-decoration:none !important; border-bottom:none !important; font-weight:inherit; cursor:default; }
 body.no-explain .gloss-word .gw-tip { display:none !important; }
 /* 画布图片 */
@@ -541,7 +555,7 @@ body.dark .viz-table th, body.dark .viz-op { background:#262626; }
 body.dark .viz-table td, body.dark .viz-table th { border-color:#3a3a3a; }
 
 .free-note-input {
-  width:100%; height:100%; box-sizing:border-box; border:none; outline:none; resize:none;
+  width:100%; height:100%; box-sizing:border-box; border:none; outline:none; resize:none; overflow:hidden;
   background:transparent; color:#5d4037; font-size:13px; line-height:1.5; font-family:inherit;
   display:block; padding:0;
 }
@@ -595,6 +609,33 @@ body.no-explain .gw-no { display:none; }
   border:5px solid transparent; border-top-color:rgba(18,20,30,.97);
 }
 .seq-badge:hover .gw-tip { opacity:1; transform:translateY(0); }
+/* ===== 整体说明角标（无序号的批注）===== */
+.desc-badge {
+  position:absolute; top:-11px; right:-11px; z-index:6;
+  min-width:20px; height:20px; padding:0 5px; box-sizing:border-box;
+  display:inline-flex; align-items:center; justify-content:center;
+  background:#1971c2; color:#fff; border:2px solid #fff; border-radius:11px;
+  font-size:12px; font-style:italic; font-weight:700; line-height:1; cursor:help;
+  box-shadow:0 2px 6px rgba(0,0,0,.25);
+}
+.desc-badge.static { position:relative; top:auto; right:auto; border-color:transparent; min-width:22px; height:22px; border-radius:11px; font-size:13px; margin-left:6px; }
+.desc-badge .gw-tip {
+  position:absolute; bottom:calc(100% + 8px); right:-4px; transform:translateY(4px);
+  background:rgba(18,20,30,.97); color:#eef2ff; border:1px solid #3a4160;
+  font-style:normal; font-weight:400; font-size:11px; line-height:1.55; white-space:normal;
+  width:max-content; max-width:240px; padding:7px 10px; border-radius:8px;
+  box-shadow:0 8px 22px rgba(0,0,0,.4);
+  opacity:0; pointer-events:none; transition:opacity .12s, transform .12s; z-index:90; text-align:left;
+}
+.desc-badge .gw-tip::after {
+  content:''; position:absolute; top:100%; right:10px;
+  border:5px solid transparent; border-top-color:rgba(18,20,30,.97);
+}
+.desc-badge:hover .gw-tip { opacity:1; transform:translateY(0); }
+/* 图表头部内的角标：提示向下展开（图表 overflow:hidden）*/
+.desc-badge.static .gw-tip { bottom:auto; top:calc(100% + 8px); right:0; transform:translateY(-4px); }
+.desc-badge.static .gw-tip::after { top:auto; bottom:100%; border-top-color:transparent; border-bottom-color:rgba(18,20,30,.97); }
+.desc-badge.static:hover .gw-tip { transform:translateY(0); }
 body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border); color:var(--dm-text); }
 
 </style>
@@ -681,6 +722,7 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
             <option value="treemap">矩形树</option>
           </select>
           <button class="cc-edit" @click.stop="openChartDataEditor(ch)">✎ 数据</button>
+          <span v-if="!ch.seq && ch.desc" class="desc-badge static" title="">i<span class="gw-tip">{{ ch.desc }}</span></span>
         </div>
         <canvas class="cc-canvas" :ref="el=>setChartCanvas(ch.id,el)"></canvas>
         <span class="chart-resize" title="拖动调整大小" @mousedown.stop="startResizeChart(ch,$event)"></span>
@@ -691,6 +733,7 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
            @mousedown.stop="onImageMouseDown(im,$event)"
            @contextmenu.stop.prevent="onImageContextMenu(im,$event)">
         <span v-if="im.seq" class="seq-badge">{{ im.seq.no }}<span class="gw-tip">{{ im.seq.text }}</span></span>
+        <span v-else-if="im.desc" class="desc-badge">i<span class="gw-tip">{{ im.desc }}</span></span>
         <img :src="im.src" draggable="false" alt="">
         <span class="img-resize" title="拖动调整大小" @mousedown.stop="startResizeImage(im,$event)"></span>
       </div>
@@ -701,7 +744,9 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
            @dblclick.stop="onNoteDblClick(nt,$event)"
            @contextmenu.stop.prevent="onNoteContextMenu(nt,$event)">
         <span v-if="nt.seq" class="seq-badge">{{ nt.seq.no }}<span class="gw-tip">{{ nt.seq.text }}</span></span>
+        <span v-else-if="nt.desc" class="desc-badge">i<span class="gw-tip">{{ nt.desc }}</span></span>
         <textarea v-if="nt.id===editingNoteId" class="free-note-input" v-model="noteEditText"
+                  @input="onNoteEditInput"
                   @blur="saveNoteEdit" @keydown.esc.stop.prevent="cancelNoteEdit"
                   @mousedown.stop @click.stop @dblclick.stop></textarea>
         <div v-else class="free-note-text" :class="{ph:!nt.text}" :title="nt.desc||''"><template v-if="nt.text"><template v-for="(seg,si) in noteSegs(nt)" :key="si"><span v-if="seg.mark" class="gloss-word" :class="seg.mark.style"><span v-if="seg.mark.note" class="gw-tip">{{ seg.mark.note }}</span>{{ seg.t }}<sup v-if="seg.mark.no" class="gw-no">{{ seg.mark.no }}</sup></span><template v-else>{{ seg.t }}</template></template></template><template v-else>双击输入文本</template></div>
@@ -724,6 +769,7 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
         </div>
         <span class="node-text-segs"><template v-for="(seg,si) in n.segs" :key="si"><span v-if="seg.mark" class="gloss-word" :class="seg.mark.style"><span v-if="seg.mark.note" class="gw-tip">{{ seg.mark.note }}</span>{{ seg.t }}<sup v-if="seg.mark.no" class="gw-no">{{ seg.mark.no }}</sup></span><template v-else>{{ seg.t }}</template></template></span>
         <span v-if="n.seq" class="seq-badge node-seq">{{ n.seq.no }}<span class="gw-tip">{{ n.seq.text }}</span></span>
+        <span v-else-if="n.desc" class="desc-badge">i<span class="gw-tip">{{ n.desc }}</span></span>
         <span class="node-resize" title="拖动调整节点宽度" @mousedown.stop="startResizeNode(n,$event)"></span>
       </div>
       <div v-for="note in connNotes" :key="'cn'+note.id" class="conn-note-label"
@@ -772,7 +818,7 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
   </div>
 
   <!-- 更多菜单 -->
-  <div class="modal-mask" :class="{show:showMenu}" @click.self="showMenu=false">
+  <div class="modal-mask" :class="{show:showMenu}" @mousedown.self="showMenu=false">
     <div class="modal">
       <div class="modal-header"><span>设置</span><button class="close" @click="showMenu=false">×</button></div>
       <div class="modal-body">
@@ -780,6 +826,11 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
           <div class="menu-item switch-item" @click="toggleExplain">
             <span><span class="ico">💡</span>解释显示（词汇标注 / 序号提示）</span>
             <span class="switch" :class="{on:showExplain}"><span class="knob"></span></span>
+          </div>
+          <div class="menu-item" style="cursor:default;display:block;">
+            <div style="margin-bottom:6px;"><span class="ico">🔑</span>DeepSeek API Key（AI 整理 / 联想用，仅存本机）</div>
+            <input type="password" v-model="deepseekKey" placeholder="sk-..." class="apikey-input"
+                   @mousedown.stop @click.stop @change="savePref" @blur="savePref">
           </div>
           <div class="menu-item" @click="openEdit"><span class="ico">✎</span>编辑节点文字</div>
           <div class="menu-item" @click="resetNodePosition"><span class="ico">⟲</span>重置节点位置</div>
@@ -796,7 +847,7 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
   </div>
 
   <!-- 导图管理 -->
-  <div class="modal-mask" :class="{show:showMapManager}" @click.self="showMapManager=false">
+  <div class="modal-mask" :class="{show:showMapManager}" @mousedown.self="showMapManager=false">
     <div class="modal">
       <div class="modal-header"><span>导图管理（{{ maps.length }}个）</span><button class="close" @click="showMapManager=false">×</button></div>
       <div class="modal-body">
@@ -830,11 +881,15 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
   </div>
 
   <!-- Markdown 转思维导图 -->
-  <div class="modal-mask" :class="{show:showMdImport}" @click.self="showMdImport=false">
+  <div class="modal-mask" :class="{show:showMdImport}" @mousedown.self="showMdImport=false">
     <div class="modal">
       <div class="modal-header"><span>Markdown 转思维导图</span><button class="close" @click="showMdImport=false">×</button></div>
       <div class="modal-body">
-        <div class="hint" style="margin-bottom:8px;">粘贴 Markdown（# 为标题、- 为列表，2 空格缩进表示层级，行尾 [标签] 可带标签），将自动生成节点。</div>
+        <div class="hint" style="margin-bottom:8px;">粘贴 Markdown（# 为标题、- 为列表，2 空格缩进表示层级，行尾 [标签] 可带标签），将自动生成节点。也可先粘贴任意文本，点下方「AI 自动整理」。</div>
+        <div class="ai-tidy-row">
+          <button class="ai-tidy-btn" @click="aiTidyMd" :disabled="aiTidying">✨ AI 自动整理为 Markdown</button>
+          <span v-if="aiTidying" class="ai-tidy-loading">AI 整理中，请稍候…</span>
+        </div>
         <textarea class="export-text md-import-textarea" v-model="mdImportText" style="height:220px;"></textarea>
         <div class="viz-mode-row">
           <label><input type="radio" value="append" v-model="mdImportMode"> 追加到当前导图</label>
@@ -849,7 +904,7 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
   </div>
 
   <!-- 可视化：表格 / 图表统计 -->
-  <div class="modal-mask viz-mask" :class="{show:showViz}" @click.self="showViz=false">
+  <div class="modal-mask viz-mask" :class="{show:showViz}" @mousedown.self="showViz=false">
     <div class="modal viz-modal">
       <div class="modal-header"><span>📊 可视化（表格 / 图表统计）</span><button class="close" @click="showViz=false">×</button></div>
       <div class="modal-body">
@@ -903,7 +958,7 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
   </div>
 
   <!-- 管理连接 -->
-  <div class="modal-mask" :class="{show:showConnManager}" @click.self="showConnManager=false">
+  <div class="modal-mask" :class="{show:showConnManager}" @mousedown.self="showConnManager=false">
     <div class="modal">
       <div class="modal-header"><span>管理连接（{{ currentMap ? currentMap.connections.length : 0 }}）</span><button class="close" @click="showConnManager=false">×</button></div>
       <div class="modal-body">
@@ -923,7 +978,7 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
   </div>
 
   <!-- 导出 -->
-  <div class="modal-mask" :class="{show:showExport}" @click.self="showExport=false">
+  <div class="modal-mask" :class="{show:showExport}" @mousedown.self="showExport=false">
     <div class="modal">
       <div class="modal-header"><span>导出思维导图</span><button class="close" @click="showExport=false">×</button></div>
       <div class="modal-body">
@@ -947,7 +1002,7 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
   </div>
 
   <!-- 确认 -->
-  <div class="modal-mask" :class="{show:showConfirm}" @click.self="showConfirm=false">
+  <div class="modal-mask" :class="{show:showConfirm}" @mousedown.self="showConfirm=false">
     <div class="modal" style="max-width:400px;">
       <div class="modal-header"><span>{{ confirmTitle }}</span></div>
       <div class="modal-body"><p class="confirm-msg">{{ confirmMsg }}</p></div>
@@ -959,7 +1014,7 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
   </div>
 
   <!-- 快捷键设置 -->
-  <div class="modal-mask" :class="{show:showShortcuts}" @click.self="showShortcuts=false">
+  <div class="modal-mask" :class="{show:showShortcuts}" @mousedown.self="showShortcuts=false">
     <div class="modal" style="max-width:560px;">
       <div class="modal-header"><span>快捷键设置</span><button class="close" @click="showShortcuts=false">×</button></div>
       <div class="modal-body">
@@ -985,7 +1040,7 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
   </div>
 
   <!-- 统一标注 / 解释 -->
-  <div class="modal-mask" :class="{show:showAnnot}" @click.self="showAnnot=false">
+  <div class="modal-mask" :class="{show:showAnnot}" @mousedown.self="showAnnot=false">
     <div class="modal annot-modal">
       <div class="modal-header"><span>标注 / 解释（词汇 + 序号）</span><button class="close" @click="showAnnot=false">×</button></div>
       <div class="modal-body">
@@ -1027,7 +1082,7 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
   </div>
 
   <!-- 帮助 -->
-  <div class="modal-mask" :class="{show:showHelpModal}" @click.self="showHelpModal=false">
+  <div class="modal-mask" :class="{show:showHelpModal}" @mousedown.self="showHelpModal=false">
     <div class="modal">
       <div class="modal-header"><span>使用帮助</span><button class="close" @click="showHelpModal=false">×</button></div>
       <div class="modal-body">
@@ -1073,6 +1128,7 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
       <div class="ctx-item" @click="ctxPasteNode"><span class="ci-ico">📋</span><span class="ci-label">粘贴节点</span><span class="kbd2">Ctrl+V</span></div>
       <div class="ctx-item" @click="ctxReset"><span class="ci-ico">⟲</span><span class="ci-label">重置位置</span><span class="kbd2">R</span></div>
       <div class="ctx-item" @click="ctxNodeAnnot"><span class="ci-ico">🔖</span><span class="ci-label">标注 / 解释（词汇 + 序号）</span></div>
+      <div class="ctx-item" @click="ctxAiAssociate"><span class="ci-ico">✨</span><span class="ci-label">AI 联想（自动生成子节点）</span></div>
       <div class="ctx-sep"></div>
       <div class="ctx-color-title">节点底色（{{ NODE_PALETTE.length }} 色）</div>
       <div class="ctx-color-row">
@@ -1573,6 +1629,7 @@ createApp({
 
     const showExplain = ref(true);
     const darkMode = ref(false);
+    const deepseekKey = ref('');
     const loadPref = () => {
       try {
         const raw = localStorage.getItem(PREF_KEY);
@@ -1581,6 +1638,7 @@ createApp({
           if (p.darkMode) darkMode.value = true;
           if (p.showExplain === false) showExplain.value = false;
           if (p.toolMode === 'pan' || p.toolMode === 'select') toolMode.value = p.toolMode;
+          if (typeof p.deepseekKey === 'string') deepseekKey.value = p.deepseekKey;
           if (p.keymap && typeof p.keymap === 'object') {
             Object.keys(DEFAULT_KEYMAP).forEach(id => {
               const v = p.keymap[id];
@@ -1592,7 +1650,7 @@ createApp({
       applyPref();
     };
     const savePref = () => {
-      try { localStorage.setItem(PREF_KEY, JSON.stringify({ darkMode: darkMode.value, showExplain: showExplain.value, toolMode: toolMode.value, keymap: { ...keymap } })); } catch(e) {}
+      try { localStorage.setItem(PREF_KEY, JSON.stringify({ darkMode: darkMode.value, showExplain: showExplain.value, toolMode: toolMode.value, deepseekKey: deepseekKey.value, keymap: { ...keymap } })); } catch(e) {}
     };
     const applyPref = () => {
       document.body.classList.toggle('dark', darkMode.value);
@@ -1739,6 +1797,7 @@ createApp({
             segs: buildSegs(node.text, node.marks),
             userTextColor: node.textColor || '',
             seq: node.seq || null,
+            desc: node.desc || null,
             w: nodeBoxW(node),
             x: p.cx - nodeBoxW(node)/2, y: p.y,
             isRoot: node === root, bg: col.bg, border: col.border, textColor: col.text
@@ -2011,6 +2070,7 @@ createApp({
             const x = Math.min(p1.x, p2.x), y = Math.min(p1.y, p2.y);
             const w = Math.abs(p2.x - p1.x), h = Math.abs(p2.y - p1.y);
             const nt = makeNote(x, y, w, h, '');
+            autoFitNote(nt);
             if (currentMap.value) { currentMap.value.notes.push(nt); selectedNoteId.value = nt.id; saveMaps(); startEditNote(nt.id); }
           } else if (!mouseState.moved) {
             toast('文本模式：请在空白处按住左键拖出一片区域');
@@ -2045,26 +2105,50 @@ createApp({
     };
 
     // ===== 自由文本框（便签）=====
+    // 高度随文字内容自适应（不用滚动条）
+    let noteMeasureEl = null;
+    const NOTE_MIN_H = 40;
+    const measureNoteH = (w, text) => {
+      if (!noteMeasureEl) {
+        noteMeasureEl = document.createElement('div');
+        noteMeasureEl.style.cssText = 'position:absolute;left:-9999px;top:0;visibility:hidden;white-space:pre-wrap;word-break:break-word;box-sizing:border-box;font-size:13px;line-height:1.5;padding:8px 10px;';
+        document.body.appendChild(noteMeasureEl);
+      }
+      noteMeasureEl.style.width = w + 'px';
+      noteMeasureEl.textContent = text || '';
+      return Math.max(NOTE_MIN_H, noteMeasureEl.offsetHeight);
+    };
+    const autoFitNote = (n) => { if (n) n.h = measureNoteH(n.w, n.text); };
+    let noteEditOrig = '';
     const startEditNote = (id) => {
       const n = findNote(id); if (!n) return;
-      editingNoteId.value = id; noteEditText.value = n.text; selectedNoteId.value = id;
+      editingNoteId.value = id; noteEditText.value = n.text; noteEditOrig = n.text; selectedNoteId.value = id;
       nextTick(() => { const el = document.querySelector('.free-note-input'); if (el) { el.focus(); } });
+    };
+    const onNoteEditInput = () => {
+      const n = findNote(editingNoteId.value);
+      if (n) { n.text = noteEditText.value; autoFitNote(n); }
     };
     const saveNoteEdit = () => {
       const n = findNote(editingNoteId.value);
-      if (n) { n.text = noteEditText.value; saveMaps(); }
+      if (n) { n.text = noteEditText.value; autoFitNote(n); saveMaps(); }
       editingNoteId.value = null;
     };
-    const cancelNoteEdit = () => { editingNoteId.value = null; };
+    const cancelNoteEdit = () => {
+      const n = findNote(editingNoteId.value);
+      if (n) { n.text = noteEditOrig; autoFitNote(n); saveMaps(); }
+      editingNoteId.value = null;
+    };
     let noteDrag = null;
     // 便签右下角拖拽改变宽高
     const startResizeNote = (ln, e) => {
       if (e.button !== 0) return;
       const raw = findNote(ln.id); if (!raw) return;
-      const sx=e.clientX, sy=e.clientY, sw=raw.w, sh=raw.h;
+      const sx=e.clientX, sy=e.clientY, sw=raw.w;
       const onMove=(ev)=>{
-        let w=Math.round(sw+(ev.clientX-sx)/view.scale), h=Math.round(sh+(ev.clientY-sy)/view.scale);
-        raw.w=Math.min(1000,Math.max(80,w)); raw.h=Math.min(2000,Math.max(40,h));
+        let w=Math.round(sw+(ev.clientX-sx)/view.scale);
+        raw.w=Math.min(1000,Math.max(80,w));
+        autoFitNote(raw);
       };
       const onUp=()=>{window.removeEventListener('mousemove',onMove);window.removeEventListener('mouseup',onUp);saveMaps();};
       window.addEventListener('mousemove',onMove);window.addEventListener('mouseup',onUp);
@@ -2644,6 +2728,27 @@ createApp({
       saveMaps();
       // 新增节点保持画布不位移
     };
+    // ===== AI 联想（DeepSeek 生成子节点）=====
+    const aiAssociating = ref(false);
+    const aiAssociate = async () => {
+      if (aiAssociating.value) return;
+      const n = findNode(selectedId.value);
+      if (!n) { toast('请先选中一个节点'); return; }
+      aiAssociating.value = true;
+      try {
+        const out = await callDeepSeek([
+          { role: 'system', content: '你是思维导图联想助手。围绕用户给出的节点主题，生成 6 到 10 个有价值、具体的关联想法或子主题。要求：每条单独一行、简短（不超过 20 字）、彼此不重复；不要编号、不要项目符号、不要任何额外解释，直接逐行输出。' },
+          { role: 'user', content: '节点主题：' + n.text }
+        ], 0.8);
+        const items = out.split('\n').map(l => l.replace(/^[\s\-*•·\d.、)]+/, '').trim()).filter(Boolean);
+        if (!items.length) { toast('AI 未返回有效联想内容'); return; }
+        items.forEach(t => n.children.push(makeNode(t)));
+        saveMaps();
+        toast('已为「' + n.text + '」生成 ' + items.length + ' 个联想子节点');
+      } catch (e) { /* 错误已提示 */ }
+      aiAssociating.value = false;
+    };
+    const ctxAiAssociate = () => { closeCtxMenu(); aiAssociate(); };
     // ===== 节点复制 / 剪切 / 粘贴（可跨导图）=====
     let nodeClipboard = null;
     const cloneTree = (node) => JSON.parse(JSON.stringify(node));
@@ -2738,7 +2843,6 @@ createApp({
         currentMap.value.connections = currentMap.value.connections.filter(c => !idset.has(c.from) && !idset.has(c.to));
         clearSelection();
         saveMaps();
-        nextTick(fitView);
       };
       if (rootIds.length) askConfirm('删除节点', '选中内容包含根节点（整幅导图分支），确定删除选中的 ' + ids.length + ' 个节点吗？', doRemove);
       else doRemove();
@@ -3277,6 +3381,30 @@ createApp({
       }
     };
     // ===== Markdown 转思维导图 =====
+    // ===== DeepSeek API（OpenAI 兼容）=====
+    const DEEPSEEK_URL = 'https://api.deepseek.com/chat/completions';
+    const callDeepSeek = async (messages, temperature) => {
+      const key = (deepseekKey.value || '').trim();
+      if (!key) { toast('请先在 ⚙ 设置中填写 DeepSeek API Key'); const e0=new Error('no-api-key'); e0.code='nokey'; throw e0; }
+      let resp;
+      try {
+        resp = await fetch(DEEPSEEK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+          body: JSON.stringify({ model: 'deepseek-chat', messages, temperature: typeof temperature==='number'?temperature:0.4, stream: false })
+        });
+      } catch (e) { toast('网络请求失败，请检查网络连接'); throw e; }
+      if (!resp.ok) {
+        let detail = '';
+        try { const j = await resp.json(); detail = (j.error && j.error.message) || ''; } catch (_) {}
+        toast('DeepSeek 调用失败（' + resp.status + '）' + (detail ? '：' + detail : ''));
+        const e1 = new Error('deepseek-' + resp.status); e1.code='apifail'; throw e1;
+      }
+      const data = await resp.json();
+      const text = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+      if (typeof text !== 'string') { toast('DeepSeek 返回内容异常'); const e2=new Error('bad-response'); e2.code='badresp'; throw e2; }
+      return text.trim();
+    };
     const showMdImport = ref(false);
     const mdImportText = ref('');
     const mdImportMode = ref('append');
@@ -3287,6 +3415,24 @@ createApp({
       nextTick(() => { const el = document.querySelector('.md-import-textarea'); if (el) el.focus(); });
     };
     const ctxMdImport = () => { closeCtxMenu(); openMdImport(); };
+    const aiTidying = ref(false);
+    const aiTidyMd = async () => {
+      if (aiTidying.value) return;
+      const original = mdImportText.value || '';
+      if (!original.trim()) { toast('请先粘贴需要整理的文本'); return; }
+      aiTidying.value = true;
+      try {
+        const out = await callDeepSeek([
+          { role: 'system', content: '你是一个把零散文本、笔记、语音转写整理成规范 Markdown 的助手。要求：保留全部原始信息，不丢失任何要点；用 # 作为文档标题、## 作为分节、- 作为无序列表，列表用 2 空格缩进表达层级；只输出 Markdown 正文，不要任何额外解释，也不要使用代码围栏。' },
+          { role: 'user', content: original }
+        ], 0.3);
+        let md = out.trim();
+        md = md.replace(/^```[a-zA-Z]*\s*/, '').replace(/\s*```$/, '').trim();
+        mdImportText.value = md;
+        toast('AI 已整理为 Markdown，可直接生成导图');
+      } catch (e) { /* 错误已在 callDeepSeek 中提示，保留原文 */ }
+      aiTidying.value = false;
+    };
     const parseInlineTags = (text) => {
       let tags = [];
       const m = text.match(/\[([^\[\]]+)\]\s*$/);
@@ -3580,7 +3726,16 @@ createApp({
     onMounted(() => {
       loadPref();
       loadMaps();
-      nextTick(() => { fitView(); window.addEventListener('resize', fitView); });
+      nextTick(() => {
+        // 旧数据：便签高度统一按内容自适应一次（无滚动条）
+        let changed = false;
+        maps.value.forEach(mp => (mp.notes || []).forEach(n => {
+          const nh = measureNoteH(n.w, n.text);
+          if (n.h !== nh) { n.h = nh; changed = true; }
+        }));
+        if (changed) saveMaps();
+        fitView(); window.addEventListener('resize', fitView);
+      });
       window.addEventListener('keydown', onKeyDown);
       window.addEventListener('keydown', onCaptureKey, true);
       window.addEventListener('keyup', onKeyUp);
@@ -3604,7 +3759,7 @@ createApp({
       noteSegs, ctxNodeSeq,
       ctxRenameCurrent, ctxEnterText,
       renamingMap, renameText, renameInput,
-      darkMode, toggleDark,
+      darkMode, toggleDark, deepseekKey, savePref,
       layout, connLines, connNotes, relatedLines, isRelated, connList, canvasStyle, isRootSelected,
       onConnMouseDown, onCtrlHandleDown, onEndHandleDown, resetConnCtrl,
       keymap, SHORTCUT_ACTIONS, comboLabel, showShortcuts, recordingAction, recordConflict,
@@ -3627,6 +3782,7 @@ createApp({
       ctxCopyNode, ctxCutNode, ctxPasteNode, copySelectedNodes, pasteClipboardNodes, startResizeNote,
       askConfirm, doConfirm, showHelp,
       showMdImport, mdImportText, mdImportMode, openMdImport, applyMdImport, ctxMdImport,
+      aiTidying, aiTidyMd, ctxAiAssociate,
       showViz, vizChartType, vizValueCol, viz, vizNumericCols, vizStats, vizCanvasH,
       onVizCell, vizAddRow, vizAddCol, vizDelRow, vizDelLastCol, openViz, ctxViz,
       showExplain, toggleExplain,
