@@ -163,7 +163,7 @@ body.dark .mode-switch.on { background:#1a7f5a; border-color:#1a7f5a; color:#fff
   border-radius:12px; padding:20px; width:420px; max-width:92vw;
   box-shadow:0 8px 32px rgba(0,0,0,.2); transform:translate(-50%,-46%);
   opacity:0; pointer-events:none;
-  transition:all .2s ease; z-index:50;
+  transition:all .2s ease; z-index:95;
 }
 .edit-panel.show { transform:translate(-50%,-50%); opacity:1; pointer-events:auto; }
 .edit-panel .label { font-size:13px; color:#999; margin-bottom:8px; }
@@ -177,7 +177,7 @@ body.dark .mode-switch.on { background:#1a7f5a; border-color:#1a7f5a; color:#fff
 .edit-panel .actions button { flex:1; height:44px; border:none; border-radius:8px; font-size:15px; cursor:pointer; }
 .edit-panel .cancel { background:#f5f5f5; color:#555; }
 .edit-panel .ok { background:#1a7f5a; color:#fff; }
-.mask { position:fixed; inset:0; background:rgba(0,0,0,.3); z-index:40; display:none; }
+.mask { position:fixed; inset:0; background:rgba(0,0,0,.3); z-index:90; display:none; }
 .mask.show { display:block; }
 
 .modal-mask {
@@ -556,7 +556,7 @@ body.dark .viz-table td, body.dark .viz-table th { border-color:#3a3a3a; }
 
 .free-note-input {
   width:100%; height:100%; box-sizing:border-box; border:none; outline:none; resize:none; overflow:hidden;
-  background:transparent; color:#5d4037; font-size:13px; line-height:1.5; font-family:inherit;
+  background:transparent; color:#5d4037; font-size:inherit; line-height:1.5; font-family:inherit;
   display:block; padding:0;
 }
 body.dark .free-note { background:#3a3524; border-color:#c9a400; color:#f0e6b8; box-shadow:0 3px 10px rgba(0,0,0,.4); }
@@ -739,14 +739,13 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
       </div>
       <div v-for="nt in freeNotes" :key="'fn'+nt.id"
            class="free-note" :class="{selected:nt.id===selectedNoteId, editing:nt.id===editingNoteId}"
-           :style="{left:nt.x+'px', top:nt.y+'px', width:nt.w+'px', height:nt.h+'px'}"
+           :style="{left:nt.x+'px', top:nt.y+'px', width:nt.w+'px', height:nt.h+'px', fontSize:(nt.fs||13)+'px'}"
            @mousedown.stop="onNoteMouseDown(nt,$event)"
            @dblclick.stop="onNoteDblClick(nt,$event)"
            @contextmenu.stop.prevent="onNoteContextMenu(nt,$event)">
         <span v-if="nt.seq" class="seq-badge">{{ nt.seq.no }}<span class="gw-tip">{{ nt.seq.text }}</span></span>
         <span v-else-if="nt.desc" class="desc-badge">i<span class="gw-tip">{{ nt.desc }}</span></span>
         <textarea v-if="nt.id===editingNoteId" class="free-note-input" v-model="noteEditText"
-                  @input="onNoteEditInput"
                   @blur="saveNoteEdit" @keydown.esc.stop.prevent="cancelNoteEdit"
                   @mousedown.stop @click.stop @dblclick.stop></textarea>
         <div v-else class="free-note-text" :class="{ph:!nt.text}" :title="nt.desc||''"><template v-if="nt.text"><template v-for="(seg,si) in noteSegs(nt)" :key="si"><span v-if="seg.mark" class="gloss-word" :class="seg.mark.style"><span v-if="seg.mark.note" class="gw-tip">{{ seg.mark.note }}</span>{{ seg.t }}<sup v-if="seg.mark.no" class="gw-no">{{ seg.mark.no }}</sup></span><template v-else>{{ seg.t }}</template></template></template><template v-else>双击输入文本</template></div>
@@ -795,7 +794,7 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
   </div>
 
   <!-- 编辑文字 -->
-  <div class="mask" :class="{show:editing}" @click="cancelEdit"></div>
+  <div class="mask" :class="{show:editing}" @mousedown.self="cancelEdit"></div>
   <div class="edit-panel" :class="{show:editing}">
     <div class="label">编辑节点文字</div>
     <input ref="editInput" v-model="editText" @keyup.enter="saveEdit" placeholder="输入节点文字" />
@@ -806,7 +805,7 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
   </div>
 
   <!-- 编辑标签 -->
-  <div class="mask" :class="{show:editingTag}" @click="cancelTag"></div>
+  <div class="mask" :class="{show:editingTag}" @mousedown.self="cancelTag"></div>
   <div class="edit-panel" :class="{show:editingTag}">
     <div class="label">编辑节点标签</div>
     <input ref="tagInputEl" v-model="tagInput" @keyup.enter="saveTag" placeholder="输入标签，多个用逗号分隔" />
@@ -870,7 +869,7 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
   </div>
 
   <!-- 重命名导图 -->
-  <div class="mask" :class="{show:renamingMap}" @click="cancelRenameMap"></div>
+  <div class="mask" :class="{show:renamingMap}" @mousedown.self="cancelRenameMap"></div>
   <div class="edit-panel" :class="{show:renamingMap}">
     <div class="label">重命名导图</div>
     <input ref="renameInput" v-model="renameText" @keyup.enter="saveRenameMap" placeholder="输入导图名称" />
@@ -1118,6 +1117,13 @@ body.dark .seq-textarea { background:var(--dm-bg); border-color:var(--dm-border)
        @mousedown.stop @click.stop @contextmenu.stop.prevent="onCtxMenuRightTap">
     <template v-if="ctxMenu.type==='node'">
       <div class="ctx-head">{{ ctxMenu.nodeText }}</div>
+      <template v-if="ctxMenu.isRoot">
+        <div class="ctx-sep"></div>
+        <div class="ctx-color-title">🗺 导图属性</div>
+        <div class="ctx-item" @click="ctxRenameCurrent"><span class="ci-ico">✏️</span><span class="ci-label">修改导图名称</span></div>
+        <div class="ctx-item" @click="ctxDuplicateMap"><span class="ci-ico">⧉</span><span class="ci-label">复制导图</span></div>
+        <div class="ctx-item danger" @click="ctxDeleteMap"><span class="ci-ico">🗑</span><span class="ci-label">删除导图</span></div>
+      </template>
       <div class="ctx-item" @click="ctxEdit"><span class="ci-ico">✎</span><span class="ci-label">编辑文字</span><span class="kbd2">F2</span></div>
       <div class="ctx-item" @click="ctxAddChild"><span class="ci-ico">＋</span><span class="ci-label">添加子节点</span><span class="kbd2">Tab</span></div>
       <div class="ctx-item" @click="ctxAddSibling"><span class="ci-ico">↳</span><span class="ci-label">添加同级</span><span class="kbd2">Enter</span></div>
@@ -1382,6 +1388,38 @@ createApp({
         nextTick(fitView);
       });
     };
+    const duplicateMap = (id) => {
+      const src = maps.value.find(m => m.id === id);
+      if (!src) return;
+      const clone = JSON.parse(JSON.stringify(src));
+      const nodeIdMap = {};
+      const reNode = (node) => {
+        const oldId = node.id; nodeIdMap[oldId] = nextId++; node.id = nodeIdMap[oldId];
+        (node.children || []).forEach(reNode);
+      };
+      (clone.roots || []).forEach(reNode);
+      const noteIdMap = {}, imgIdMap = {}, chartIdMap = {};
+      (clone.notes || []).forEach(nt => { noteIdMap[nt.id] = noteSeq++; nt.id = noteIdMap[nt.id]; });
+      (clone.images || []).forEach(im => { imgIdMap[im.id] = imageSeq++; im.id = imgIdMap[im.id]; });
+      (clone.charts || []).forEach(ch => { chartIdMap[ch.id] = chartSeq++; ch.id = chartIdMap[ch.id]; });
+      const remap = (ep) => {
+        if (typeof ep === 'number') return Object.prototype.hasOwnProperty.call(nodeIdMap, ep) ? nodeIdMap[ep] : ep;
+        if (ep[0] === 'n' && ep[1] === '_') { const k = Number(ep.slice(2)); return 'n_' + (noteIdMap[k] != null ? noteIdMap[k] : k); }
+        if (ep[0] === 'i' && ep[1] === '_') { const k = Number(ep.slice(2)); return 'i_' + (imgIdMap[k] != null ? imgIdMap[k] : k); }
+        if (ep[0] === 'c' && ep[1] === '_') { const k = Number(ep.slice(2)); return 'c_' + (chartIdMap[k] != null ? chartIdMap[k] : k); }
+        return ep;
+      };
+      (clone.connections || []).forEach(c => { c.id = connId++; c.from = remap(c.from); c.to = remap(c.to); });
+      clone.id = 'map_' + (mapId++);
+      clone.name = src.name + ' 副本';
+      clone.createdAt = Date.now(); clone.updatedAt = Date.now();
+      maps.value.push(clone);
+      currentMapId.value = clone.id;
+      clearSelection();
+      saveMaps();
+      nextTick(fitView);
+      toast('已复制导图：' + clone.name);
+    };
     const renamingMap = ref(false);
     const renameText = ref('');
     const renameInput = ref(null);
@@ -1455,7 +1493,7 @@ createApp({
     const marquee = reactive({ show:false, x:0, y:0, w:0, h:0 });
     const marqueeHitIds = ref([]);               // 框选过程中实时命中的节点
     const isInMarquee = (id) => marqueeHitIds.value.indexOf(id) >= 0;
-    const ctxMenu = reactive({ show:false, x:0, y:0, type:'canvas', nodeId:null, noteId:null, nodeText:'', wx:0, wy:0 });
+    const ctxMenu = reactive({ show:false, x:0, y:0, type:'canvas', nodeId:null, noteId:null, nodeText:'', wx:0, wy:0, isRoot:false });
     const spaceDown = ref(false);
     const isPanning = ref(false);
     // 左键工具模式：'select'=空白框选节点（默认）；'pan'=左键直接拖动画布；'text'=空白拖出矩形添加自由文本
@@ -2070,7 +2108,7 @@ createApp({
             const x = Math.min(p1.x, p2.x), y = Math.min(p1.y, p2.y);
             const w = Math.abs(p2.x - p1.x), h = Math.abs(p2.y - p1.y);
             const nt = makeNote(x, y, w, h, '');
-            autoFitNote(nt);
+            fitNoteFont(nt);
             if (currentMap.value) { currentMap.value.notes.push(nt); selectedNoteId.value = nt.id; saveMaps(); startEditNote(nt.id); }
           } else if (!mouseState.moved) {
             toast('文本模式：请在空白处按住左键拖出一片区域');
@@ -2105,38 +2143,49 @@ createApp({
     };
 
     // ===== 自由文本框（便签）=====
-    // 高度随文字内容自适应（不用滚动条）
+    // 框体尺寸保持用户所选；文字超出时按比例缩小字号填满（不用滚动条）
     let noteMeasureEl = null;
-    const NOTE_MIN_H = 40;
-    const measureNoteH = (w, text) => {
+    const NOTE_BASE_FS = 13, NOTE_MIN_FS = 7;
+    const measureTextH = (contentW, text, fs) => {
       if (!noteMeasureEl) {
         noteMeasureEl = document.createElement('div');
-        noteMeasureEl.style.cssText = 'position:absolute;left:-9999px;top:0;visibility:hidden;white-space:pre-wrap;word-break:break-word;box-sizing:border-box;font-size:13px;line-height:1.5;padding:8px 10px;';
+        noteMeasureEl.style.cssText = 'position:absolute;left:-9999px;top:0;visibility:hidden;white-space:pre-wrap;word-break:break-word;box-sizing:content-box;margin:0;padding:0;line-height:1.5;';
         document.body.appendChild(noteMeasureEl);
       }
-      noteMeasureEl.style.width = w + 'px';
+      noteMeasureEl.style.width = contentW + 'px';
+      noteMeasureEl.style.fontSize = fs + 'px';
       noteMeasureEl.textContent = text || '';
-      return Math.max(NOTE_MIN_H, noteMeasureEl.offsetHeight);
+      return noteMeasureEl.offsetHeight;
     };
-    const autoFitNote = (n) => { if (n) n.h = measureNoteH(n.w, n.text); };
+    const fitNoteFont = (n) => {
+      if (!n) return;
+      const contentW = Math.max(24, n.w - 20);
+      const contentH = Math.max(14, n.h - 16);
+      const natH = measureTextH(contentW, n.text || '', NOTE_BASE_FS);
+      let scale = 1;
+      if (natH > contentH && natH > 0) scale = contentH / natH;
+      let fs = Math.round(NOTE_BASE_FS * scale * 100) / 100;
+      n.fs = Math.max(NOTE_MIN_FS, Math.min(NOTE_BASE_FS, fs));
+    };
     let noteEditOrig = '';
     const startEditNote = (id) => {
       const n = findNote(id); if (!n) return;
       editingNoteId.value = id; noteEditText.value = n.text; noteEditOrig = n.text; selectedNoteId.value = id;
       nextTick(() => { const el = document.querySelector('.free-note-input'); if (el) { el.focus(); } });
     };
-    const onNoteEditInput = () => {
+    // 实时缩放：v-model 改变 noteEditText 时同步文字并按框体缩放
+    watch(noteEditText, (v) => {
       const n = findNote(editingNoteId.value);
-      if (n) { n.text = noteEditText.value; autoFitNote(n); }
-    };
+      if (n) { n.text = v; fitNoteFont(n); }
+    });
     const saveNoteEdit = () => {
       const n = findNote(editingNoteId.value);
-      if (n) { n.text = noteEditText.value; autoFitNote(n); saveMaps(); }
+      if (n) { n.text = noteEditText.value; fitNoteFont(n); saveMaps(); }
       editingNoteId.value = null;
     };
     const cancelNoteEdit = () => {
       const n = findNote(editingNoteId.value);
-      if (n) { n.text = noteEditOrig; autoFitNote(n); saveMaps(); }
+      if (n) { n.text = noteEditOrig; fitNoteFont(n); saveMaps(); }
       editingNoteId.value = null;
     };
     let noteDrag = null;
@@ -2148,7 +2197,7 @@ createApp({
       const onMove=(ev)=>{
         let w=Math.round(sw+(ev.clientX-sx)/view.scale);
         raw.w=Math.min(1000,Math.max(80,w));
-        autoFitNote(raw);
+        fitNoteFont(raw);
       };
       const onUp=()=>{window.removeEventListener('mousemove',onMove);window.removeEventListener('mouseup',onUp);saveMaps();};
       window.addEventListener('mousemove',onMove);window.addEventListener('mouseup',onUp);
@@ -2589,13 +2638,14 @@ createApp({
 
     // ===== 右键上下文菜单 =====
     const openCtxAt = (clientX, clientY, type, node, note) => {
-      const mw = 240, mh = type === 'node' ? 460 : (type === 'note' ? 220 : 300);
+      const mw = 240, mh = type === 'node' ? 620 : (type === 'note' ? 220 : 300);
       const x = Math.min(clientX, window.innerWidth - mw - 8);
       const y = Math.min(clientY, window.innerHeight - mh - 8);
       ctxMenu.type = type;
       ctxMenu.nodeId = node ? node.id : null;
       ctxMenu.noteId = note ? note.id : null;
       ctxMenu.nodeText = note ? ('文本：' + (note.text || '空')).slice(0, 12) : (node ? node.text : '');
+      ctxMenu.isRoot = type === 'node' && node ? isRootNode(node.id) : false;
       ctxMenu.x = Math.max(8, x); ctxMenu.y = Math.max(8, y);
       ctxMenu.show = true;
     };
@@ -2633,6 +2683,8 @@ createApp({
       ctxMenu.wx = wp.x; ctxMenu.wy = wp.y;
     };
     const ctxRenameCurrent = () => { closeCtxMenu(); if (currentMap.value) startRenameMap(currentMap.value.id); };
+    const ctxDuplicateMap = () => { closeCtxMenu(); if (currentMap.value) duplicateMap(currentMap.value.id); };
+    const ctxDeleteMap = () => { closeCtxMenu(); if (currentMap.value) deleteMap(currentMap.value.id); };
     const ctxEnterText = () => { closeCtxMenu(); setToolMode('text'); };
     const ctxEdit = () => { closeCtxMenu(); const n = findNode(selectedId.value); if (n) openEditFor(n); };
     const ctxAddChild = () => { closeCtxMenu(); addChild(); };
@@ -3727,13 +3779,8 @@ createApp({
       loadPref();
       loadMaps();
       nextTick(() => {
-        // 旧数据：便签高度统一按内容自适应一次（无滚动条）
-        let changed = false;
-        maps.value.forEach(mp => (mp.notes || []).forEach(n => {
-          const nh = measureNoteH(n.w, n.text);
-          if (n.h !== nh) { n.h = nh; changed = true; }
-        }));
-        if (changed) saveMaps();
+        // 旧数据：按框体尺寸计算便签字号（文字超出则缩小填满，不改变框体）
+        maps.value.forEach(mp => (mp.notes || []).forEach(n => fitNoteFont(n)));
         fitView(); window.addEventListener('resize', fitView);
       });
       window.addEventListener('keydown', onKeyDown);
@@ -3774,11 +3821,11 @@ createApp({
       openTagEditor, saveTag, cancelTag, toggleTagRelation,
       startConnect, completeConnection, deleteConnection, updateConnNote, editConnNote, openConnManager,
       openExport, copyExport, generateImage, downloadImage,
-      switchMap, newMap, deleteMap, startRenameMap, saveRenameMap, cancelRenameMap,
+      switchMap, newMap, deleteMap, duplicateMap, startRenameMap, saveRenameMap, cancelRenameMap,
       newRootInCurrent, confirmClearCurrent, resetNodePosition, openMapManager,
       selectAllNodes, nudgeSelection, openMoreMenu,
       ctxEdit, ctxAddChild, ctxAddSibling, ctxTag, ctxConnect, ctxReset, ctxDelete,
-      ctxSelectAll, ctxNewRoot, ctxFit, ctxDark, ctxExport, ctxManager,
+      ctxSelectAll, ctxNewRoot, ctxFit, ctxDark, ctxExport, ctxManager, ctxDuplicateMap, ctxDeleteMap,
       ctxCopyNode, ctxCutNode, ctxPasteNode, copySelectedNodes, pasteClipboardNodes, startResizeNote,
       askConfirm, doConfirm, showHelp,
       showMdImport, mdImportText, mdImportMode, openMdImport, applyMdImport, ctxMdImport,
